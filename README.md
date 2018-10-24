@@ -7,5 +7,6 @@ A set of python modules & class created to build applications around NOTAM & Air
 
 The primary target is the paragliding community but other recreational flight activities might find our XCTools usefull.
 
+[Project documentation](https://xctools.readthedocs.io/en/latest/) 
 
 
