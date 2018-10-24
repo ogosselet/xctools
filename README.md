@@ -8,7 +8,4 @@ A set of python modules & class created to build applications around NOTAM & Air
 The primary target is the paragliding community but other recreational flight activities might find our XCTools usefull.
 
 
-.. |Docs badge| image:: https://img.shields.io/badge/docs-latest-brightgreen.svg
-   :target: https://docs.ansible.com/ansible
-
 
