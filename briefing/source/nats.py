@@ -1,3 +1,7 @@
+'''Briefing Module - NATS Source 
+
+Download a briefing from the NATS
+'''
 
 
 
@@ -34,7 +38,7 @@ LOGIN_CONFIRM_STRING = "Delivers a briefing containing FIR NOTAM"
 
 
 class NATS(NotamSource):
-    '''[summary]
+    '''NATS as NotamSource
 
     Args:
         NotamSource (object): The NotamSource superclass defining the common interface of all sources

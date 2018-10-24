@@ -1,0 +1,1 @@
+#TODO: destination where the briefing are stored (example AWS S3)
