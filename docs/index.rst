@@ -11,6 +11,7 @@ Welcome to XCTools documentation!
    :caption: Contents:
 
    overview
+   briefing
    notam
    schedule
 

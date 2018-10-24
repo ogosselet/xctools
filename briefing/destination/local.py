@@ -1,0 +1,1 @@
+#TODO: destination where the briefing are stored (local file system)
