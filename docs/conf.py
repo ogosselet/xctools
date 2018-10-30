@@ -105,7 +105,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'XCTools2doc'
+htmlhelp_basename = 'XCToolsdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -132,7 +132,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'XCTools2.tex', 'XCTools2 Documentation',
+    (master_doc, 'XCTools.tex', 'XCTools Documentation',
      'Olivier Gosselet', 'manual'),
 ]
 
@@ -142,7 +142,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'xctools2', 'XCTools2 Documentation',
+    (master_doc, 'xctools', 'XCTools Documentation',
      [author], 1)
 ]
 
@@ -153,8 +153,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'XCTools2', 'XCTools2 Documentation',
-     author, 'XCTools2', 'One line description of project.',
+    (master_doc, 'XCTools', 'XCTools Documentation',
+     author, 'XCTools', 'One line description of project.',
      'Miscellaneous'),
 ]
 

@@ -1,23 +1,9 @@
-'''Briefing Module - NATS Source 
+'''NOTAM Briefing Source (NATS Module)
 
-Download a briefing from the NATS
 '''
 
-
-
-
-
-# Class should "overwrite / implement" class method like
-#
-# - login
-# - download
-# ...
-#
-# Specific to the
-# i.e. the sequence should be abstracted and if possible independant from the
-
 from __future__ import absolute_import, division, print_function
-from .base import NotamSource
+from base import NotamSource
 from lxml import html
 
 import time
@@ -38,10 +24,12 @@ LOGIN_CONFIRM_STRING = "Delivers a briefing containing FIR NOTAM"
 
 
 class NATS(NotamSource):
-    '''NATS as NotamSource
+    '''NATS implementation
+
+    The NATS specific class will overwrite all the method as described in the base class documentation
 
     Args:
-        NotamSource (object): The NotamSource superclass defining the common interface of all sources
+        NotamSource ([object]): The NotamSource superclass defining the common interface of all sources
 
     Raises:
         UserWarning: [description]
@@ -51,13 +39,22 @@ class NATS(NotamSource):
 
     Returns:
         [type]: [description]
-    '''
 
+    Other parameters:
+        lower_fl: '0'
+        upper_fl: '999'
+        ifr': True
+        vfr: True
+        firs: ['EBBU', 'LFFF']
+        utc_from: datetime.datetime(2018, 9, 12, 12, 0)
+        utc_to: datetime.datetime(2018, 9, 12, 17, 0)
+
+    '''
 
     source_name = "NATS"
 
-    def print_source(self):
-        print("NATS Class Source " + self.source_name)
+    #def print_source(self):
+    #    print("NATS Class Source " + self.source_name)
 
     def _login_sequence(self):
         # Login URL
@@ -210,6 +207,8 @@ class NATS(NotamSource):
         # POST "download" form
         print(payload)
         r = self.req_session.post(url, data=payload, headers=headers, cookies=self.req_session.cookies)
+        # Looks like this sleep is required !
+        time.sleep(5)
         # Looks like the second post is required !
         # This "duplicate" stuff needs to be investigated !
         r = self.req_session.post(url, data=payload, headers=headers, cookies=self.req_session.cookies)
@@ -247,6 +246,7 @@ class NATS(NotamSource):
             i = i + 1
             for table_row in table_rows:
                 parsed_row = parse_row(table_row)
+                #print(parsed_row['e_line'])
                 # Finalize the split & clean of this dict of "lines"
                 notam_row = self._finalize_row(parsed_row)
                 #if notam_row <> '':
@@ -266,7 +266,7 @@ class NATS(NotamSource):
             final_notam['q'] = ''
 
         #final_notam['q'] = line_dict['q_line']
-        # Our abc_line is multiloine and it doesn't work well with search
+        # Our abc_line is multiline and it doesn't work well with search
         # Let's remove our extra \n first
         abc_line = line_dict['abc_line'].replace('\n', ' ')
 
@@ -291,6 +291,15 @@ class NATS(NotamSource):
         else:
             final_notam['c'] = ''
 
+        # Extracting E)
+        e_line = line_dict['e_line'].replace('\n', ' ')
+        e_match = re.search(r'(E\)) (.*)', e_line)
+        if e_match:
+            final_notam['e'] = e_match.group(2)
+        else:
+            final_notam['e'] = ''
+
+
         # Clean LOWER, UPPER, ...
         try:
             final_notam['lower'] = line_dict['lower_line'].replace('LOWER: ', '')
@@ -306,6 +315,7 @@ class NATS(NotamSource):
             final_notam['sched'] = line_dict['schedule_line'].replace('SCHEDULE: ', '')
         except:
             final_notam['sched'] = ''
+
 
         final_notam['src'] = self.source_name
 
