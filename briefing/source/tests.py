@@ -1,7 +1,7 @@
 '''Testing the briefing module
 '''
 from __future__ import absolute_import, division, print_function
-from nats import NATS
+from briefing.source.nats import NATS
 
 import unittest
 import datetime
