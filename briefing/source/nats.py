@@ -3,7 +3,7 @@
 '''
 
 from __future__ import absolute_import, division, print_function
-from briefing.source.base import NotamSource
+from base import NotamSource
 from lxml import html
 
 import time
