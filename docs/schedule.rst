@@ -15,4 +15,4 @@ Schedule Parser Module
 
 .. automodule:: notam.sched_parser
     :members:
-    :exclude-members: t_error, t_newline,   
+    :exclude-members: t_error, t_newline,
