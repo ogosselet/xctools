@@ -13,7 +13,7 @@ class TestSource(unittest.TestCase):
     def test_natsparsing(self):
 
         source = NATS()
-        file_briefing = open("tests/nats.html", "r")
+        file_briefing = open("./briefing/source/tests/nats.html", "r")
         source.raw_area_briefing = file_briefing.read()
         file_briefing.close()
 
