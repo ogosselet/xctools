@@ -3,7 +3,7 @@
 '''
 
 from __future__ import absolute_import, division, print_function
-from base import NotamSource
+from briefing.source.base import NotamSource
 from lxml import html
 
 import time
@@ -207,6 +207,8 @@ class NATS(NotamSource):
         # POST "download" form
         print(payload)
         r = self.req_session.post(url, data=payload, headers=headers, cookies=self.req_session.cookies)
+        # Looks like this sleep is required !
+        time.sleep(5)
         # Looks like the second post is required !
         # This "duplicate" stuff needs to be investigated !
         r = self.req_session.post(url, data=payload, headers=headers, cookies=self.req_session.cookies)

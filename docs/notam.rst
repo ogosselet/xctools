@@ -1,5 +1,4 @@
 Notam Module
 ============
 
-.. automodule:: notam.notam
-    :members:
+The Notam module

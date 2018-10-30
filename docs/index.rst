@@ -14,6 +14,7 @@ Welcome to XCTools documentation!
    briefing
    notam
    schedule
+   code
 
 
 Indices and tables
