@@ -1,10 +1,11 @@
 from __future__ import absolute_import, division, print_function
-from lxml import etree, objectify
 
+from lxml import etree
+#from functools import partial
 from shapely.geometry import Point
+from shapely.ops import transform
 
 import pyproj
-import shapely
 import re
 import simplekml
 import logging
@@ -13,61 +14,117 @@ logger = logging.getLogger(__name__)
 
 geod = pyproj.Geod(ellps='WGS84')
 
+FREE_GEOM = 1
+CIRCLE_GEOM = 2
 
-#class Airspace(object):
 
-#    def __init__(self):
+class AixmSourceError(Exception):
+    '''Exception class building a common message format including AIXM info
+
+    Args:
+        Exception (object): Exception as superclass
+
+    '''
+
+    def __init__(self, aixm_source, msg=None):
+        '''Init the superclass "Exception" string
+
+        Args:
+            aixm_source ([AixmSource]): the AixmSource object where the exception was triggered
+            msg ([str], optional): Defaults to None. The contextual message of the Exception
+        '''
+
+        if msg is None:
+            # Set some default useful error message
+            msg = 'unexpected error'
+        exc_msg = 'AIXM {}: {}'.format(aixm_source.filename, msg)
+
+        super(AixmSourceError, self).__init__(exc_msg)
+        self.aixm_source = aixm_source
+
+
+class AirspaceGeomUnknown(AixmSourceError):
+    '''Exception raised when a AIXM decoding error is detected
+
+    Args:
+        AixmSourceError (Exception): AixmSourceError as superclass
+    '''
+
+    def __init__(self, aixm_source, msg=None):
+        '''Init the superclass AixmSourceError message
+
+        Args:
+            aixm_source ([AixmSource]): the AixmSource object where the exception was triggered
+            msg ([str], optional): Defaults to None (replaced by a generic message).
+                The contextual message of the Exception
+        '''
+
+        if msg is None:
+            msg = 'unknown geometry'
+        super(AirspaceGeomUnknown, self).__init__(aixm_source, msg)
 
 def format_vertical_limit(code, value, unit):
 
-    #TODO: AGL/AMSL ? Ft/FL ? ...
 
+    #TODO: AGL/AMSL ? Ft/FL ? ...
     return '{}-{}-{}'.format(code, value, unit)
 
 def format_geo_size(value, unit):
-     
-     #TODO: cover all possible unit
-     return float(value)/60
 
-def compute_distance(geo_center, geo_point):
+    #TODO: cover all possible unit
+    if unit == "NM":
+        return float(value)*1852
+    if unit == "KM":
+        return float(value)*1000
 
-    dstproj = pyproj.Proj('+proj=ortho +lon_0=%f +lat_0=%f' % (geo_center[0], geo_center[1]))
+def compute_distance(geo_pt1, geo_pt2):
+    '''Compute great circle distance between 2 points
+
+    TODO: Not really used but we might reuse it to compute the "mean" circle radius
+
+    Args:
+        geo_center ([latitude, longitude]): the geo coordinates of the first point
+        geo_point ([latitude, longitude]): the geo coordinates of the second point
+    '''
+
+    dstproj = pyproj.Proj('+proj=ortho +lon_0=%f +lat_0=%f' % (geo_pt1[0], geo_pt2[1]))
     srcproj = pyproj.Proj(ellps='WGS84', proj='latlong')
-    new_cx, new_cy = pyproj.transform(srcproj, dstproj, geo_center[0], geo_center[1])
-    new_px, new_py = pyproj.transform(srcproj, dstproj, geo_point[0], geo_point[1])
+    new_cx, new_cy = pyproj.transform(srcproj, dstproj, geo_pt1[0], geo_pt1[1])
+    new_px, new_py = pyproj.transform(srcproj, dstproj, geo_pt2[0], geo_pt2[1])
     radius = Point(new_cx, new_cy).distance(Point(new_px, new_py))
     logger.debug('Computed radius by shapely %s', radius)
-    azimuth1, azimuth2, radius2 = geod.inv(geo_center[0], geo_center[1], geo_point[0], geo_point[1])
+    azimuth1, azimuth2, radius2 = geod.inv(geo_pt1[0], geo_pt1[1], geo_pt2[0], geo_pt2[1])
     logger.debug('Computed radius by pyproj only %s', radius2)
 
 def dms2dd(degree, minute, second, decimal):
     '''Degree Minute Second (Decimal) => Decimal Degree
-    
+
     Args:
         degree ([int]): [description]
         minute ([int]): [description]
         second ([int]): [description]
         decimal ([float]): [description]
-    
+
     Returns:
         [float]: the Decimal Degree
     '''
 
-    return float(degree) + float(minute)/60 + float(second)/3600 + decimal/3600
+    return float(degree) + float(minute)/60 + float(second)/3600 + float(decimal)/3600
 
 def format_decimal_degree(coordinate_string):
     '''Detect a coordinate format & perform the transformation to Decimal Degree
 
+    Works for string representation of Latitude or Longitude
+
     North Latitude & East Longitude return a positive value
     South Latitude & West Longitude return a negative value
-    
+
     Args:
         coordinate_string ([str]): the input coordinate string that we will auto-detect
-    
-    Returns:
-        [type]: [description]
-    '''
 
+    Returns:
+        [float]: a decimal degree coordinate value
+    '''
 
     # Expected format:
     # - Decimal degree (51.089056N or 002.545428E)
@@ -103,9 +160,9 @@ def format_decimal_degree(coordinate_string):
             sign = -1
 
         if lat_string.group(4):
-            decimal = float(lat_string.group(4))
+            decimal = lat_string.group(4)
         else:
-            decimal = 0
+            decimal = '0'
 
         return sign * dms2dd(
             degree=lat_string.group(1),
@@ -121,11 +178,11 @@ def format_decimal_degree(coordinate_string):
             sign = -1
         else:
             sign = 1
-        
+
         if long_string.group(4):
-            decimal = float(long_string.group(4))
+            decimal = long_string.group(4)
         else:
-            decimal = 0
+            decimal = '0'
 
         return sign * dms2dd(
             degree=long_string.group(1),
@@ -133,60 +190,62 @@ def format_decimal_degree(coordinate_string):
             second=long_string.group(3),
             decimal=decimal
         )
-
     #TODO: Raise an exception if we received a format not supported
 
 class Airspace(object):
+    '''Airspace Interface Abstraction Class
+
+    Implement a common set of Airspace method independant from the Source of the Airspace information
+    '''
+
 
     def __init__(self, source, uuid):
+        '''Init Method creating a new XCTools Airspace object
+
+        Args:
+            source ([object]): a supported Airspace[description]
+            uuid ([string]): a unique id of the source for the file we are trying to extract
+        '''
 
         self.source = source
         self.uuid = uuid
         self.admin_data = None
         self.gis_data = None
 
-         
-
     def parse_airspace(self):
+        '''Execute the parsing of the Airspace to extract Admin & GIS data
+        '''
 
         logger.debug('Parsing Airspace')
         self.admin_data = self.source.airspace_admin_data(self.uuid)
         self.gis_data = self.source.airspace_geometry_data(self.uuid)
-
-
-    def _admin_info(self):
-
-        pass
-
-
 
 class AixmSource(object):
     '''Class to process Airspace information contained in an AIXM 4.5 source file
 
     This class should implement all the method expected by the Airspace class to
     collect all the relevant information present in the source (admin info, geo info, ...)
+    and normalize the return data to our XCTools format
     '''
 
-
     def  __init__(self, filename):
-        '''Initialize our AIXM Tree from a file
+        '''Initialize the AIXM source
 
         Args:
-            filename ([type]): [description]
+            filename ([type]): the file system file containing the AIXM 4.5 Airspace Informations
         '''
 
-        self.tree =  etree.parse(filename)
+        self.filename = filename
+        self.tree =  etree.parse(self.filename)
         self.airspace_mids = []
         self._border_lookup = []
+        self._arc_lookup = []
 
-        # Always store tha last GRC point processed  
-        self.last_grc = None 
-
-    #def as_string(self):
-    #    return etree.tostring(self.tree)
+        # A "sliding" buffer to store the last GRC points
+        self.grc_buf = ['','']
 
     def list_airspace_uuid(self):
-        '''List all Airspace contained in a specific source file
+        '''List all Airspace contained in the specific source file
 
         Interface method that needs to be implemented for any source
 
@@ -208,11 +267,23 @@ class AixmSource(object):
 
         return tmp
 
+#    def list_code_type(self):
+#
+#        for avx in self.tree.xpath('//Abd/Avx'):
+#            print('CODE: {}'.format(avx.xpath('codeType/text()')[0]))
 
     def airspace_admin_data(self, ase_uid):
+        '''Extract & normalize the Airspace Admin data
+
+        Args:
+            ase_uid ([string]): The UUID ot the Airspace
+
+        Returns:
+            [dict]: the Airspace Admin data as a dictionary
+        '''
 
         #TODO: continue to extract all admin data of the Airspace
-        #TODO: moore formating expected
+        #TODO: more formating expected
 
         # Parse admin data
         admin_data = {}
@@ -229,77 +300,133 @@ class AixmSource(object):
         return admin_data
 
     def airspace_geometry_data(self, ase_uid):
+        '''Extract & normalize the Airspace GIS data
 
+        TODO: cover the creation of the polygon in WKT to make the consumption easier
+
+        Args:
+            ase_uid ([string]): The UUID ot the Airspace
+
+        Raises:
+            AirspaceGeomUnknown: Exception raised when the GIS data extraction method is not known
+
+        Returns:
+            [list]: the Airspace GIS data as a list of coordinates that can be used to create a "Polygon"
+        '''
+
+
+        abd_elem = self.tree.xpath('//Abd[AbdUid[AseUid[@mid="' + ase_uid + '"]]]')
+        if abd_elem[0].xpath('Avx'):
+            print(abd_elem[0].xpath('Avx'))
+            logger.debug('Free geometry detected')
+            return self._airspace_free_geometry(ase_uid)
+
+        if abd_elem[0].xpath('Circle'):
+            logger.debug('Circle geometry detected')
+            return self._airspace_circle_geometry(ase_uid)
+
+        raise AirspaceGeomUnknown(self, ase_uid)
+
+    def _airspace_circle_geometry(self, ase_uid):
+        '''Create a polygon for a Circle geometry
+        
+        Args:
+            ase_uid ([string]): The UUID ot the Airspace
+        
+        Returns:
+            [list]: a list of coordinates that can be used to create a "Polygon"
+        '''
+
+        abd_elem = self.tree.xpath('//Abd[AbdUid[AseUid[@mid="' + ase_uid + '"]]]')
+        circle_elem = abd_elem[0].xpath('Circle')[0]
+
+        # Collect the center & the radius of the Circle
+        arc_center = [
+            format_decimal_degree(circle_elem.xpath('geoLatCen/text()')[0]),
+            format_decimal_degree(circle_elem.xpath('geoLongCen/text()')[0]),
+            circle_elem.xpath('valCrc/text()')[0]]
+
+        # Collect the radius
+        arc_radius = format_geo_size(
+            value=circle_elem.xpath('valRadius/text()')[0],
+            unit=circle_elem.xpath('uomRadius/text()')[0])
+
+        self._prepare_arc_lookup((arc_center[0], arc_center[1]), arc_radius)
+        return self._arc_lookup
+
+
+    def _airspace_free_geometry(self, ase_uid):
+        '''Create a polygon for a Free geometry
+        
+        Free geometry are made of points, border points, arc of circle
+
+        Args:
+            ase_uid ([string]): The UUID ot the Airspace
+        
+        Returns:
+            [list]: a list of coordinates that can be used to create a "Polygon"
+        '''
+
+        grc_buffer = ['', '']
+        avx_function_buffer = ['', '']
         gis_data = []
-        border_flag = False
+
         abd_elem = self.tree.xpath('//Abd[AbdUid[AseUid[@mid="' + ase_uid + '"]]]')
         avx_elems = abd_elem[0].xpath('Avx')
-
         # Loop in all avx in order
         for avx_elem in avx_elems:
-            if avx_elem.xpath('codeType/text()')[0] == 'FNT':
+            # In an AVX, there is always a reference to a point
+            # We will store this point in a sliding buffer so that the
+            # previous point remains available if we need it
+            # We also directly normalize it to a decimal degree value
 
-                # We need 3 information to expand a border
-                #  - the uuid of the border (gbr_uuid)
-                #  - the "last" airspace point before the border (begin of border)
-                #  - the "first" airspace point after the border (end of border)
-                #
+            # Slide the buffers
+            grc_buffer[0] = grc_buffer[1]
+            avx_function_buffer[0] = avx_function_buffer[1]
 
-                gbr_uid = avx_elem.xpath('GbrUid')[0].get('mid')
-                border_start = [
+            # Collect next point
+            grc_buffer[1] = [
                     format_decimal_degree(avx_elem.xpath('geoLat/text()')[0]),
                     format_decimal_degree(avx_elem.xpath('geoLong/text()')[0]),
                     avx_elem.xpath('valCrc/text()')[0]
                 ]
-                border_flag=True
 
-                gis_data.append(border_start)
+            if avx_elem.xpath('codeType/text()')[0] == 'GRC':
+                avx_function_buffer[1] = 'GRC'
+                # Nothing more to collect
 
-                continue
+            if avx_elem.xpath('codeType/text()')[0] == 'RHL':
+                avx_function_buffer[1] = 'RHL'
+                # Nothing more to collect
 
-            if avx_elem.xpath('codeType/text()')[0] == 'GRC' and not border_flag:
-                # This is just a normal point we pile it up
-                
-                self.last_grc = [
-                    format_decimal_degree(avx_elem.xpath('geoLat/text()')[0]),
-                    format_decimal_degree(avx_elem.xpath('geoLong/text()')[0]),
-                    avx_elem.xpath('valCrc/text()')[0]
-                    ]
+            if avx_elem.xpath('codeType/text()')[0] == 'FNT':
+                avx_function_buffer[1] = 'FNT'
 
-                gis_data.append(self.last_grc)
-
-                continue
-
-            elif border_flag:
-                # This is the first point after the border
-                border_stop = ([
-                    format_decimal_degree(avx_elem.xpath('geoLat/text()')[0]),
-                    format_decimal_degree(avx_elem.xpath('geoLong/text()')[0]),
-                    avx_elem.xpath('valCrc/text()')[0]
-                ])
-                border_flag = False
-
-                # Border limit defines
-                gis_data.extend(self.extract_border_points(gbr_uid, border_start, border_stop))
-
-                # We need to add the border stop point right ? Otherwise we don't get it
-                gis_data.append(border_stop)
-
-                continue
+                # Collect the border id information
+                gbr_uid = avx_elem.xpath('GbrUid')[0].get('mid')
 
             if avx_elem.xpath('codeType/text()')[0] == 'CCA':
-                #TODO: Expand the geometry
+                avx_function_buffer[1] = 'CCA'
 
-                # The center:
+                # Collect the center & the radius of the Circle Arc
                 arc_center = [
                     format_decimal_degree(avx_elem.xpath('geoLatArc/text()')[0]),
                     format_decimal_degree(avx_elem.xpath('geoLongArc/text()')[0]),
                     avx_elem.xpath('valCrc/text()')[0]
                 ]
 
-                arc_point = [
-                    format_decimal_degree(avx_elem.xpath('geoLat/text()')[0]),
-                    format_decimal_degree(avx_elem.xpath('geoLong/text()')[0]),
+                arc_radius = format_geo_size(
+                    value=avx_elem.xpath('valRadiusArc/text()')[0],
+                    unit=avx_elem.xpath('uomRadiusArc/text()')[0]
+                )
+            #TODO: Refactor to make it DRY (too similar with previous code extract)
+            if avx_elem.xpath('codeType/text()')[0] == 'CWA':
+                avx_function_buffer[1] = 'CWA'
+
+                # Collect the center & the radius of the Circle Arc
+                arc_center = [
+                    format_decimal_degree(avx_elem.xpath('geoLatArc/text()')[0]),
+                    format_decimal_degree(avx_elem.xpath('geoLongArc/text()')[0]),
                     avx_elem.xpath('valCrc/text()')[0]
                 ]
 
@@ -308,37 +435,206 @@ class AixmSource(object):
                     unit=avx_elem.xpath('uomRadiusArc/text()')[0]
                 )
 
-                logger.debug('Starting to compute an arc:')
-                logger.debug('    center: %s %s', arc_center[0], arc_center[1])
-                logger.debug('    radius: %s', arc_radius)
+            # Now we implement the previous avx_function
+            if avx_function_buffer[0] == 'GRC' or avx_function_buffer[0] == 'RHL' :
+                # We just pile up the point
+                gis_data.append(grc_buffer[0])
+            if avx_function_buffer[0] == 'FNT':
+                logger.debug('Expanding Border (FNT %s)', gbr_uid)
+                # We pile up the first point
+                gis_data.append(grc_buffer[0])
+                # ... and extend with the points extracted from the border
+                gis_data.extend(self.extract_border_points(gbr_uid, grc_buffer[0], grc_buffer[1]))
+                # Cleanup
+                gbr_uid = None
+            if avx_function_buffer[0] == 'CCA':
+                logger.debug(
+                    'Expanding Arc (CCA) Center: %s, %s Radius: %s',
+                    arc_center[0], arc_center[1], arc_radius
+                    )
 
-                # Naive Circle Approach
-                points = self._circle_experiment((arc_center[0], arc_center[1]), arc_radius)
-                for point in points:
-                    gis_data.append([point[0], point[1]])
+                # We pile up the first point
+                gis_data.append(grc_buffer[0])
 
-                compute_distance((arc_center[1], arc_center[0]),(arc_point[1], arc_point[0]))
-                compute_distance(
-                    (arc_center[1], arc_center[0]),
-                    (format_decimal_degree('0045550E'), format_decimal_degree('502319N') )
+                # Counter Clockwise = -1
+                gis_data.extend(self.extract_arc_points(-1, arc_center, arc_radius, grc_buffer[0], grc_buffer[1]))
+
+                # Cleanup
+                arc_center = None
+                arc_radius = None
+
+            if avx_function_buffer[0] == 'CWA':
+                logger.debug(
+                    'Expanding Arc (CWA) Center: %s, %s Radius: %s',
+                    arc_center[0], arc_center[1], arc_radius
+                    )
+                # We pile up the first point
+                gis_data.append(grc_buffer[0])
+
+                # Clockwise = 1
+                gis_data.extend(self.extract_arc_points(1, arc_center, arc_radius, grc_buffer[0], grc_buffer[1]))
+
+                # Cleanup
+                arc_center = None
+                arc_radius = None
+
+            if avx_function_buffer[0] == '':
+                logger.debug(
+                    'This is the very first point'
                 )
 
-                pass
-                #gis_data.append([
-                #    'C',
-                #    'C',
-                #    'A'
-                #])
+        # When the loop is over, we still have our last buffer point to add.
+        gis_data.append(grc_buffer[1])
 
         return gis_data
+
+    def extract_arc_points(self, direction, arc_center, arc_radius, arc_start, arc_stop):
+        '''Extract a subset of Circle points forming a specific Arc of Circle
+        
+        TODO: confirm the arc_radius needs to be in meter
+
+        Args:
+            direction ([-1, 1]): Counter clockwise (-1) or clockwise (1) direction to move on circle
+            arc_center ([lat, long]): The geo coord. (lat/long) of the Arc center 
+            arc_radius ([float]): The radius of the Arc
+            arc_start ([lat, long]): The geo coord. (lat/long) of the start point of the Arc
+            arc_stop ([lat, long]): The geo coord. (lat/long) of the end point of the Arc
+        
+        Returns:
+            [list]: a list of coordinates that can be used to create a "Polygon"
+        '''
+
+        logger.debug('Extracting Arc')
+
+        # Buffer the full circle in a data structure that we will lookup to isolate or arc points
+        self._prepare_arc_lookup(arc_center, arc_radius)
+
+        # Finding the closest surrounding points around the start/stop points of our Arc on the Circle
+        # idx_ are tupples of point index on the circle
+        idx_start = self._get_idx_around_arc_point(latitude=arc_start[0], longitude=arc_start[1])
+        idx_stop = self._get_idx_around_arc_point(latitude=arc_stop[0], longitude=arc_stop[1])
+
+        # The actual extraction of the points
+        return self._get_arc_points(direction, idx_start, idx_stop)
+
+
+    def _prepare_arc_lookup(self, arc_center, arc_radius):
+        '''Circle point indexed "lookup" structure
+        
+        Args:
+            arc_center ([lat, long]): the The geo coord. (lat/long) of the Circle center
+            arc_radius ([float]): the radius of the Circle
+        '''
+
+        # Cleanup to remove any previous circle "lookup" data from a previous circle
+        logger.debug('Cleaning up the arc lookup structure')
+        self._arc_lookup = []
+        # Reprojected Circle (v3 because I tried several approach to get a proper circle drawn on a sphere)
+        points = self._circle_v3((arc_center[0], arc_center[1]), arc_radius)
+
+        for i, point in enumerate(points):
+            print(point)
+            self._arc_lookup.append([point[1],point[0], i])
+
+    def _get_idx_around_arc_point(self, latitude, longitude):
+        '''[summary]
+        
+        Args:
+            latitude ([type]): [description]
+            longitude ([type]): [description]
+        
+        Returns:
+            [type]: [description]
+        '''
+
+
+        logger.debug('Finding position on Arc for Lat:%s / Long:%s', latitude, longitude)
+        # TODO: replace with "max float" or a meaningfull max distance ever possible on earth
+        min_distance = float(1000000000000)
+        idx_left = ''
+        idx_right = ''
+        for i in range(len(self._arc_lookup)-1):
+            geo_lat_1 = self._arc_lookup[i][0]
+            geo_long_1 = self._arc_lookup[i][1]
+            geo_lat_2 = self._arc_lookup[i+1][0]
+            geo_long_2 = self._arc_lookup[i+1][1]
+
+            # Compute 
+            distance = (latitude - geo_lat_1)**2 + \
+                    (longitude - geo_long_1)**2 + \
+                    (geo_lat_2 - latitude)**2 + \
+                    (geo_long_2 - longitude)**2
+
+            if distance < min_distance:
+                min_distance = distance
+                idx_left = self._arc_lookup[i][2]
+                idx_right = self._arc_lookup[i+1][2]
+                #print('CRC Left: {} - CRC Right: {}'.format(crc_left, crc_right))
+                #print('Lat: {} - Long:{}'.format(geo_lat_1, geo_long_1))
+                #print(min_distance)
+
+        return (idx_left, idx_right)
+
+    def _get_arc_points(self, direction, idx_start, idx_stop):
+        '''Get the subset of the border point in the good order
+
+        Args:
+            index_start ([tupple]): the index of the 2 points around our first border point
+            index_stop ([type]): the index of the 2 points around our last border point
+        '''
+
+        # Remember that index_ are still tupple for now.
+        # Let's first define the direction in which need to navigate the border
+
+        #return self._arc_lookup
+        print(idx_start)
+        print(idx_stop)
+
+        #return self._arc_lookup
+        if direction == 1 and (idx_start[0] < idx_stop[0]):
+            # We can just extract the points
+            start = max(idx_start)
+            stop = min(idx_stop) + 1
+            return self._arc_lookup[start:stop]
+
+        if direction == 1 and (idx_start[0] > idx_stop[0]):
+            # We need to pass over 0
+
+            # There is 2 extraction
+            #     from max(idx_start) to the end
+            start = max(idx_start)
+            start_list = self._arc_lookup[start:]
+            #     from 0 to min(idx_stop) + 1
+            stop = min(idx_stop) + 1
+            end_list = self._arc_lookup[0:stop]
+            logger.debug('Extracting in CW direction from %s to %s', start, stop)
+            return start_list + end_list
+
+        # Counter Clockwise
+        if direction == -1 and (idx_start[0] < idx_stop[0]):
+            # We can just extract the points
+            start = min(idx_start) + 1
+            stop = max(idx_stop)
+            return list(reversed(self._arc_lookup[0:start])) + list(reversed(self._arc_lookup[stop:]))
+
+        if direction == -1 and (idx_start[0] > idx_stop[0]):
+            # We need to pass over 0
+
+            # There is 2 extraction
+            #     from max(idx_start) to the end
+            start = max(idx_stop)
+            stop = min(idx_start)+1
+            return list(reversed(self._arc_lookup[start:stop]))
+
+
 
     def extract_border_points(self, gbr_uid, border_start, border_stop):
 
         logger.debug('Extracting border <GbrUid mid=%s>', gbr_uid)
 
-        self._prepare_border_lookup(gbr_uid)
         # We will create a structure to lookup our potential points
-        
+        self._prepare_border_lookup(gbr_uid)
+
         # Finding the closest surrounding points
         # Now we need to do the clever extraction
         crc_start = self._get_crc_around_border_point(latitude=border_start[0], longitude=border_start[1])
@@ -364,7 +660,7 @@ class AixmSource(object):
             geo_long = format_decimal_degree(gbv_elem.xpath('geoLong/text()')[0])
             val_crc = gbv_elem.xpath('valCrc/text()')[0]
             self._border_lookup.append([geo_lat, geo_long, val_crc])
-    
+
     def _get_crc_around_border_point(self, latitude, longitude):
 
         #print('Lat: {} - Long:{}'.format(geo_lat, geo_long))
@@ -408,10 +704,10 @@ class AixmSource(object):
                 index_right = index
                 break
         return (index_left, index_right)
-    
+
     def _get_border_points(self, index_start, index_stop):
         '''Get the subset of the border point in the good order
-        
+
         Args:
             index_start ([tupple]): the index of the 2 points around our first border point
             index_stop ([type]): the index of the 2 points around our last border point
@@ -434,13 +730,98 @@ class AixmSource(object):
         else:
             return list(reversed(self._border_lookup[stop:start]))
 
-    def _circle_experiment(self, center_point, radius):
+    def _circle_v1(self, center_point, radius):
 
         circle = Point(center_point[0], center_point[1]).buffer(radius)
+        #print(circle)
+        #circle_coord = circle.exterior.coords
+        #return circle_coord
+        return circle
+
+    def _circle_v2(self, center_point, radius):
+
+        logger.debug('Center point 2')
+        print(center_point[0], center_point[1])
+        #print(center_point[0], center_point[1])
+        #srcproj = pyproj.Proj('+proj=ortho +lon_0=%f +lat_0=%f' % (center_point[1], center_point[0]))
+        #srcproj = pyproj.Proj('+proj=eqc +lon_0=%f +lat_0=%f' % (center_point[1], center_point[0]))
+        #srcproj = pyproj.Proj('+proj=ortho')
+        #dstproj = pyproj.Proj(ellps='WGS84', proj='latlong')
+        lat, lon = center_point
+    # proj4str = '+proj=aeqd +lat_0=%s +lon_0=%s +x_0=0 +y_0=0' % (lat, lon)
+        AEQD = pyproj.Proj(proj='aeqd', lat_0=lat, lon_0=lon, x_0=lon, y_0=lat)
+        WGS84 = pyproj.Proj(init='epsg:4326')
+
+        # transform the given lat-long onto the flat AEQD plane
+        tx_lon, tx_lat = pyproj.transform(WGS84, AEQD, lon, lat)
+        logger.debug('tx_lon %s tx_lat %s', tx_lon, tx_lat)
+        circle = Point(tx_lat, tx_lon).buffer(14816)
         print(circle)
-        circle_coord = circle.exterior.coords
-        return circle_coord
-        
+
+        def inverse_tx(x, y, z=None):
+            y, x = pyproj.transform(AEQD, WGS84, y, x)
+            return (y, x)
+
+        # inverse projection from AEQD to EPSG4326-WGS84
+        test_circle = transform(inverse_tx, circle)
+        print(test_circle)
+
+        #project = partial(pyproj.transform, srcproj, dstproj)
+
+        #point_transformed = transform(project, Point(center_point[0], center_point[1]))
+        #test_circle = Point(0, 0).buffer(radius)
+        test_circle_points = test_circle.exterior.coords
+        print(test_circle_points)
+        for i, test_circle_point in enumerate(test_circle_points):
+            print('{} {}'.format(i, test_circle_point))
+        #for i, point in enumerate(new_points):
+        #    self._arc_lookup.append([point[0],point[1], i])
+        print(len(test_circle_points))
+        return test_circle_points
+
+    def _circle_v3(self, center_point, radius):
+
+        logger.debug('Circle V3')
+        logger.debug('Center Lat: %s Long: %s', center_point[0], center_point[1])
+
+        #print(center_point[0], center_point[1])
+        #srcproj = pyproj.Proj('+proj=ortho +lon_0=%f +lat_0=%f' % (center_point[1], center_point[0]))
+        #srcproj = pyproj.Proj('+proj=eqc +lon_0=%f +lat_0=%f' % (center_point[1], center_point[0]))
+        #srcproj = pyproj.Proj('+proj=ortho')
+        #dstproj = pyproj.Proj(ellps='WGS84', proj='latlong')
+        lat, lon = center_point
+    # proj4str = '+proj=aeqd +lat_0=%s +lon_0=%s +x_0=0 +y_0=0' % (lat, lon)
+        AEQD = pyproj.Proj(proj='aeqd', lat_0=lat, lon_0=lon, x_0=lon, y_0=lat)
+        WGS84 = pyproj.Proj(init='epsg:4326')
+
+        # transform the given lat-long onto the flat AEQD plane
+        tx_lon, tx_lat = pyproj.transform(WGS84, AEQD, lon, lat)
+        logger.debug('tx_lon %s tx_lat %s', tx_lon, tx_lat)
+        circle = Point(tx_lat, tx_lon).buffer(radius)
+        print(circle)
+
+        def inverse_tx(x, y, z=None):
+            x, y = pyproj.transform(AEQD, WGS84, x, y)
+            return (x, y)
+
+        # inverse projection from AEQD to EPSG4326-WGS84
+        test_circle = transform(inverse_tx, circle)
+        print(test_circle)
+
+        #project = partial(pyproj.transform, srcproj, dstproj)
+
+        #point_transformed = transform(project, Point(center_point[0], center_point[1]))
+        #test_circle = Point(0, 0).buffer(radius)
+        test_circle_points = test_circle.exterior.coords
+        print(test_circle_points)
+        for i, test_circle_point in enumerate(test_circle_points):
+            print('{} {}'.format(i, test_circle_point))
+        #for i, point in enumerate(new_points):
+        #    self._arc_lookup.append([point[0],point[1], i])
+        print(len(test_circle_points))
+        return test_circle_points
+
+
 #    def extract_gbv(self, gbr_uid, first_index, last_index, reverse_order=False):
 #
 #        tmp = []
@@ -491,19 +872,55 @@ if __name__ == '__main__':
     # List all Airpaces present in the source
     all_airspaces = aixm_source.list_airspace_uuid()
 
+    # CodeType
+    # all_codetype = aixm_source.list_code_type()
+
     # Work on a specific Airspace
-    airspace = Airspace(aixm_source, str(100760256))
+
+    # EBD26 - OK (FNT & 1 CCA)
+    #name = 'EBD26'
+    #airspace = Airspace(aixm_source, str(100760256))
+
+    # CTR ELLX - OK (2 CWA)
+    # name = 'ELLX'
+    # airspace = Airspace(aixm_source, str(84915550))
+
+    # EHMCG1 - OK (RHL & FNT)
+    # name = 'EHMCG1'
+    # airspace = Airspace(aixm_source, str(232804194))
+
+    # EBBE1A
+    #name = 'EBBE1A'
+    #airspace = Airspace(aixm_source, str(101002747038897))
+
+    # A Circle Geometry
+    name = 'EBR28'
+    airspace = Airspace(aixm_source, str(400001601922575))
+
     airspace.parse_airspace()
 
+
     # Produce a KML
-    kml=simplekml.Kml()
-    for nbr, gbv in enumerate(airspace.gis_data):
-        kml.newpoint(
-            name='gbv-{}'.format(nbr),
-            coords=[(gbv[1], gbv[0])]
-        )
-        print('Lat: {}, Lon: {}'.format(gbv[1], gbv[0]))
-    kml.save('test_border.kml')
+    logger.debug('Producing a KML Polygon')
+    kml = simplekml.Kml()
+    pol = kml.newpolygon(name=name)
+    pol.style.linestyle.color = simplekml.Color.red
+    pol.style.linestyle.width = 1
+    pol.style.polystyle.color = simplekml.Color.changealphaint(100, simplekml.Color.red)
+    outerboundaryis = []
+    for gbv in airspace.gis_data:
+        outerboundaryis.append((gbv[1], gbv[0]))
+    # Close the polygon
+    outerboundaryis.append((airspace.gis_data[0][1], airspace.gis_data[0][0]))
+    pol.outerboundaryis = outerboundaryis
+    print(outerboundaryis)
+
+    #    kml.newpoint(
+    #        name='gbv-{}'.format(nbr),
+    #        coords=[(gbv[1], gbv[0])]
+    #    )
+    #    print('Lat: {}, Lon: {}'.format(gbv[1], gbv[0]))
+    kml.save('{}.kml'.format(name))
 
     #test_circle = aixm_source._circle_experiment((100, 150), 20)
     #print(test_circle)
