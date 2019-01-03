@@ -37,3 +37,8 @@ Schedule Parser Module
     :members:
     :exclude-members: t_error, t_newline,
 
+Airspace Module
+---------------
+
+.. automodule:: airspace.aixm_parser
+    :members:

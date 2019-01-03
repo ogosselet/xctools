@@ -24,6 +24,7 @@ Access to the NOTAM information requires user website registration.
 Usage
 ^^^^^
 
+.. code-block:: python
 >>> from briefing.source.nats import NATS
 >>> import datetime
 >>>

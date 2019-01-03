@@ -329,10 +329,10 @@ class AixmSource(object):
 
     def _airspace_circle_geometry(self, ase_uid):
         '''Create a polygon for a Circle geometry
-        
+
         Args:
             ase_uid ([string]): The UUID ot the Airspace
-        
+
         Returns:
             [list]: a list of coordinates that can be used to create a "Polygon"
         '''
@@ -357,12 +357,12 @@ class AixmSource(object):
 
     def _airspace_free_geometry(self, ase_uid):
         '''Create a polygon for a Free geometry
-        
+
         Free geometry are made of points, border points, arc of circle
 
         Args:
             ase_uid ([string]): The UUID ot the Airspace
-        
+
         Returns:
             [list]: a list of coordinates that can be used to create a "Polygon"
         '''
@@ -490,16 +490,16 @@ class AixmSource(object):
 
     def extract_arc_points(self, direction, arc_center, arc_radius, arc_start, arc_stop):
         '''Extract a subset of Circle points forming a specific Arc of Circle
-        
+
         TODO: confirm the arc_radius needs to be in meter
 
         Args:
             direction ([-1, 1]): Counter clockwise (-1) or clockwise (1) direction to move on circle
-            arc_center ([lat, long]): The geo coord. (lat/long) of the Arc center 
+            arc_center ([lat, long]): The geo coord. (lat/long) of the Arc center
             arc_radius ([float]): The radius of the Arc
             arc_start ([lat, long]): The geo coord. (lat/long) of the start point of the Arc
             arc_stop ([lat, long]): The geo coord. (lat/long) of the end point of the Arc
-        
+
         Returns:
             [list]: a list of coordinates that can be used to create a "Polygon"
         '''
@@ -519,8 +519,8 @@ class AixmSource(object):
 
 
     def _prepare_arc_lookup(self, arc_center, arc_radius):
-        '''Circle point indexed "lookup" structure
-        
+        '''Circle points indexed "lookup" structure
+
         Args:
             arc_center ([lat, long]): the The geo coord. (lat/long) of the Circle center
             arc_radius ([float]): the radius of the Circle
@@ -530,21 +530,35 @@ class AixmSource(object):
         logger.debug('Cleaning up the arc lookup structure')
         self._arc_lookup = []
         # Reprojected Circle (v3 because I tried several approach to get a proper circle drawn on a sphere)
-        points = self._circle_v3((arc_center[0], arc_center[1]), arc_radius)
+        points = self._create_circle((arc_center[0], arc_center[1]), arc_radius)
 
         for i, point in enumerate(points):
             print(point)
             self._arc_lookup.append([point[1],point[0], i])
 
     def _get_idx_around_arc_point(self, latitude, longitude):
-        '''[summary]
-        
+        '''Define the index of the 2 circle points that are the closest from a POI (lat, long).
+
+        The POI is on or very close from the circle.
+        We measure the distance between 2 point and our POI as follow using Pythagore
+
+          - sqr(distance) = sqr(delta_lat) + sqr(delta_long)
+
+        We compute a cumulated distance by summing up the 2 sqr(distance)
+
+        The 2 consecutive circle points minimizing this cumulated distance are the interesting
+        point of the circle.
+
+        The main difference with the "Border" equivalent method is that we use in this case
+        an integer value that we add on each and every circle point as "index" lookup value 
+        for the extraction
+
         Args:
-            latitude ([type]): [description]
-            longitude ([type]): [description]
-        
+            latitude ([float]): Geo Lat. in decimal degree of the POI we want to locate on the circle
+            longitude ([float]): Geo Long. in decimal degree of the POI we want to locate on the circle
+
         Returns:
-            [type]: [description]
+            [tupple]: the 2 index of the circle points surrounding our POI
         '''
 
 
@@ -553,32 +567,32 @@ class AixmSource(object):
         min_distance = float(1000000000000)
         idx_left = ''
         idx_right = ''
+        # TODO: converge more quickly if once prooven to be slow to process
         for i in range(len(self._arc_lookup)-1):
             geo_lat_1 = self._arc_lookup[i][0]
             geo_long_1 = self._arc_lookup[i][1]
             geo_lat_2 = self._arc_lookup[i+1][0]
             geo_long_2 = self._arc_lookup[i+1][1]
 
-            # Compute 
+            # Compute the distance
             distance = (latitude - geo_lat_1)**2 + \
                     (longitude - geo_long_1)**2 + \
                     (geo_lat_2 - latitude)**2 + \
                     (geo_long_2 - longitude)**2
 
+            # Looking up the minimum 
             if distance < min_distance:
                 min_distance = distance
                 idx_left = self._arc_lookup[i][2]
                 idx_right = self._arc_lookup[i+1][2]
-                #print('CRC Left: {} - CRC Right: {}'.format(crc_left, crc_right))
-                #print('Lat: {} - Long:{}'.format(geo_lat_1, geo_long_1))
-                #print(min_distance)
 
         return (idx_left, idx_right)
 
     def _get_arc_points(self, direction, idx_start, idx_stop):
-        '''Get the subset of the border point in the good order
+        '''Get the subset of the Arc point in the good direction
 
         Args:
+            direction (-1, 1): counter-clockwise=-1, clockwise=1 
             index_start ([tupple]): the index of the 2 points around our first border point
             index_stop ([type]): the index of the 2 points around our last border point
         '''
@@ -586,11 +600,6 @@ class AixmSource(object):
         # Remember that index_ are still tupple for now.
         # Let's first define the direction in which need to navigate the border
 
-        #return self._arc_lookup
-        print(idx_start)
-        print(idx_stop)
-
-        #return self._arc_lookup
         if direction == 1 and (idx_start[0] < idx_stop[0]):
             # We can just extract the points
             start = max(idx_start)
@@ -626,9 +635,20 @@ class AixmSource(object):
             stop = min(idx_start)+1
             return list(reversed(self._arc_lookup[start:stop]))
 
-
-
     def extract_border_points(self, gbr_uid, border_start, border_stop):
+        '''Get the subset of the relevant border point betwwen a start/stop border points
+        
+        Similar to the circle case, the border POI are close from the border but will
+        most likely not exist as a border points in the AIXM source
+
+        Args:
+            gbr_uid ([string]): The uuid of the relevant border information discovered in the source
+            border_start ([lat, long]): the first known point on the border 
+            border_stop ([lat, long]): the last known point on the border
+        
+        Returns:
+            [list]: a list of coordinates that can be used to create an important line of the Airspace polygon (i.e the border)
+        '''
 
         logger.debug('Extracting border <GbrUid mid=%s>', gbr_uid)
 
@@ -646,6 +666,11 @@ class AixmSource(object):
         return self._get_border_points(index_start, index_stop)
 
     def _prepare_border_lookup(self, gbr_uid):
+        '''Border points indexed "lookup" structure
+
+        Args:
+            gbr_uid ([string]): the UUID of the specific border segment in the source
+        '''
 
         # The <Gbr>
         gbr_elem = self.tree.xpath('//Gbr[GbrUid[@mid="' + gbr_uid + '"]]')
@@ -655,15 +680,38 @@ class AixmSource(object):
 
         for gbv_elem in gbv_elems:
             # We need to be sure the points are coded in decimal degree
-            # If not, we transform it
+            # If not, we transform them
             geo_lat = format_decimal_degree(gbv_elem.xpath('geoLat/text()')[0])
             geo_long = format_decimal_degree(gbv_elem.xpath('geoLong/text()')[0])
             val_crc = gbv_elem.xpath('valCrc/text()')[0]
             self._border_lookup.append([geo_lat, geo_long, val_crc])
 
     def _get_crc_around_border_point(self, latitude, longitude):
+        '''Define the CRC of the 2 border points that are the closest from a POI (lat, long).
 
-        #print('Lat: {} - Long:{}'.format(geo_lat, geo_long))
+        The POI is on or very close from the border.
+        We measure the distance between 2 point and our POI as follow using Pythagore
+
+          - sqr(distance) = sqr(delta_lat) + sqr(delta_long)
+
+        We compute a cumulated distance by summing up the 2 sqr(distance)
+
+        The 2 consecutive border points minimizing this cumulated distance are the interesting
+        point of the border.
+
+        The main difference with the "Circle" equivalent method is that we use in this case
+        the CRC value present on each and every border point as "index" lookup value for the extraction
+
+        TODO: DRY Circle/Border methods that are at the end very similar !
+
+        Args:
+            latitude ([float]): Geo Lat. in decimal degree of the POI we want to locate on the circle
+            longitude ([float]): Geo Long. in decimal degree of the POI we want to locate on the circle
+
+        Returns:
+            [tupple]: the 2 CRC index of the border points surrounding our POI
+        '''
+
         # Iterate over all the border points skipping the first one
         logger.debug('Finding position on border for Lat:%s / Long:%s', latitude, longitude)
         min_distance = float(1000000000000)
@@ -672,7 +720,6 @@ class AixmSource(object):
         for i in range(len(self._border_lookup)-1):
             geo_lat_1 = self._border_lookup[i][0]
             geo_long_1 = self._border_lookup[i][1]
-            #print('Lat: {} - Long:{}'.format(geo_lat_1, geo_long_1))
             geo_lat_2 = self._border_lookup[i+1][0]
             geo_long_2 = self._border_lookup[i+1][1]
 
@@ -685,16 +732,21 @@ class AixmSource(object):
                 min_distance = distance
                 crc_left = self._border_lookup[i][2]
                 crc_right = self._border_lookup[i+1][2]
-                #print('CRC Left: {} - CRC Right: {}'.format(crc_left, crc_right))
-                #print('Lat: {} - Long:{}'.format(geo_lat_1, geo_long_1))
-                #print(min_distance)
 
         return (crc_left, crc_right)
 
     def _get_border_point_index(self, val_crc):
+        '''Lookup the index of the border points based on the CRC value of the points
+        
+        TODO: There is probably a more pythonic way to perform this lookup in a list
 
-        #TODO: There is probably a more pythonic way to perform this lookup in a
-        #TODO: list !
+        Args:
+            val_crc ([tupple]): the 2 CRCs of consecutive border points
+        
+        Returns:
+            [tuple]: the index value of the border points in our lookup structure 
+        '''
+
         for index, border_point in enumerate(self._border_lookup):
             if border_point[2] == val_crc[0]:
                 index_left = index
@@ -706,16 +758,15 @@ class AixmSource(object):
         return (index_left, index_right)
 
     def _get_border_points(self, index_start, index_stop):
-        '''Get the subset of the border point in the good order
+        '''Extract the subset of the border points in the good direction
 
         Args:
             index_start ([tupple]): the index of the 2 points around our first border point
-            index_stop ([type]): the index of the 2 points around our last border point
+            index_stop ([tupple]): the index of the 2 points around our last border point
         '''
 
-        # Remember tht index_ are still tupple for now.
+        # Remember that index_ are still tupple for now.
         # Let's first define the direction in which need to navigate the border
-
         if index_start[0] < index_stop[0]:
             forward = True
             start = max(index_start)
@@ -730,133 +781,42 @@ class AixmSource(object):
         else:
             return list(reversed(self._border_lookup[stop:start]))
 
-    def _circle_v1(self, center_point, radius):
+    def _create_circle(self, center_point, radius):
+        '''Create a circle on Earth 
 
-        circle = Point(center_point[0], center_point[1]).buffer(radius)
-        #print(circle)
-        #circle_coord = circle.exterior.coords
-        #return circle_coord
-        return circle
+        Circle drawn in normal Cartesian geometry by shapely becomes Ellipsoid on Earth
 
-    def _circle_v2(self, center_point, radius):
+        It is necessary to introduce a concept of projection   
+        
+        Args:
+            center_point ([type]): [description]
+            radius ([type]): [description]
+        '''
 
-        logger.debug('Center point 2')
-        print(center_point[0], center_point[1])
-        #print(center_point[0], center_point[1])
-        #srcproj = pyproj.Proj('+proj=ortho +lon_0=%f +lat_0=%f' % (center_point[1], center_point[0]))
-        #srcproj = pyproj.Proj('+proj=eqc +lon_0=%f +lat_0=%f' % (center_point[1], center_point[0]))
-        #srcproj = pyproj.Proj('+proj=ortho')
-        #dstproj = pyproj.Proj(ellps='WGS84', proj='latlong')
-        lat, lon = center_point
-    # proj4str = '+proj=aeqd +lat_0=%s +lon_0=%s +x_0=0 +y_0=0' % (lat, lon)
-        AEQD = pyproj.Proj(proj='aeqd', lat_0=lat, lon_0=lon, x_0=lon, y_0=lat)
-        WGS84 = pyproj.Proj(init='epsg:4326')
 
-        # transform the given lat-long onto the flat AEQD plane
-        tx_lon, tx_lat = pyproj.transform(WGS84, AEQD, lon, lat)
-        logger.debug('tx_lon %s tx_lat %s', tx_lon, tx_lat)
-        circle = Point(tx_lat, tx_lon).buffer(14816)
-        print(circle)
-
-        def inverse_tx(x, y, z=None):
-            y, x = pyproj.transform(AEQD, WGS84, y, x)
-            return (y, x)
-
-        # inverse projection from AEQD to EPSG4326-WGS84
-        test_circle = transform(inverse_tx, circle)
-        print(test_circle)
-
-        #project = partial(pyproj.transform, srcproj, dstproj)
-
-        #point_transformed = transform(project, Point(center_point[0], center_point[1]))
-        #test_circle = Point(0, 0).buffer(radius)
-        test_circle_points = test_circle.exterior.coords
-        print(test_circle_points)
-        for i, test_circle_point in enumerate(test_circle_points):
-            print('{} {}'.format(i, test_circle_point))
-        #for i, point in enumerate(new_points):
-        #    self._arc_lookup.append([point[0],point[1], i])
-        print(len(test_circle_points))
-        return test_circle_points
-
-    def _circle_v3(self, center_point, radius):
-
-        logger.debug('Circle V3')
+        logger.debug('Circle Creation')
         logger.debug('Center Lat: %s Long: %s', center_point[0], center_point[1])
 
-        #print(center_point[0], center_point[1])
-        #srcproj = pyproj.Proj('+proj=ortho +lon_0=%f +lat_0=%f' % (center_point[1], center_point[0]))
-        #srcproj = pyproj.Proj('+proj=eqc +lon_0=%f +lat_0=%f' % (center_point[1], center_point[0]))
-        #srcproj = pyproj.Proj('+proj=ortho')
-        #dstproj = pyproj.Proj(ellps='WGS84', proj='latlong')
         lat, lon = center_point
-    # proj4str = '+proj=aeqd +lat_0=%s +lon_0=%s +x_0=0 +y_0=0' % (lat, lon)
+
         AEQD = pyproj.Proj(proj='aeqd', lat_0=lat, lon_0=lon, x_0=lon, y_0=lat)
         WGS84 = pyproj.Proj(init='epsg:4326')
 
         # transform the given lat-long onto the flat AEQD plane
         tx_lon, tx_lat = pyproj.transform(WGS84, AEQD, lon, lat)
-        logger.debug('tx_lon %s tx_lat %s', tx_lon, tx_lat)
         circle = Point(tx_lat, tx_lon).buffer(radius)
-        print(circle)
 
         def inverse_tx(x, y, z=None):
             x, y = pyproj.transform(AEQD, WGS84, x, y)
             return (x, y)
 
         # inverse projection from AEQD to EPSG4326-WGS84
-        test_circle = transform(inverse_tx, circle)
-        print(test_circle)
+        projected_circle = transform(inverse_tx, circle)
 
-        #project = partial(pyproj.transform, srcproj, dstproj)
-
-        #point_transformed = transform(project, Point(center_point[0], center_point[1]))
-        #test_circle = Point(0, 0).buffer(radius)
-        test_circle_points = test_circle.exterior.coords
-        print(test_circle_points)
-        for i, test_circle_point in enumerate(test_circle_points):
-            print('{} {}'.format(i, test_circle_point))
-        #for i, point in enumerate(new_points):
-        #    self._arc_lookup.append([point[0],point[1], i])
-        print(len(test_circle_points))
-        return test_circle_points
-
-
-#    def extract_gbv(self, gbr_uid, first_index, last_index, reverse_order=False):
-#
-#        tmp = []
-#
-#       # The <Gbr>
-#        gbr_elem = self.tree.xpath('//Gbr[GbrUid[@mid="' + gbr_uid + '"]]')
-#        # Find all <Gbv>
-#        gbv_elems = gbr_elem[0].xpath('Gbv')
-#        print(len(gbv_elems))
-#        print(first_index)
-#        print(gbv_elems[first_index].xpath('valCrc/text()'))
-#        print(last_index)
-#        #return gbv_elems[10:20]
-#        if reverse_order:
-#            return list(reversed(gbv_elems[first_index:last_index+1]))
-#        else:
-#            return gbv_elems[first_index:last_index+1]
-
-
-
-
-#    def get_all_airspace_elements(self, ase_uid):
-#
-#        out = []
-#
-#        # The <Ase>
-#        ase_elem = self.tree.xpath('//Ase[AseUid[@mid="' + ase_uid + '"]]')
-#        out.extend(ase_elem)
-
-#        # The <Abd>
-#        abd_elem = self.tree.xpath('//Abd[AbdUid[AseUid[@mid="' + ase_uid + '"]]]')
-#        out.extend(abd_elem)
-#
-#        return out
-
+        projected_circle_points = projected_circle.exterior.coords
+        #for i, projected_circle_point in enumerate(projected_circle_points):
+        #    print('{} {}'.format(i, projected_circle_point))
+        return projected_circle_points
 
 if __name__ == '__main__':
 

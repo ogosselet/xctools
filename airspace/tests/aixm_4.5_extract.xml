@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-    //BEGIN_PROPERTIES @sdo.download.parameterset.name=OR-EUROCONTROL-261 @sdo.download.parameterset.id=400001682483130
-    //END_PROPERTIES
--->
 <AIXM-Snapshot 
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.aixm.aero/schema/4.5/AIXM-Snapshot.xsd" version="4.5" effective="2015-07-03T00:00:00" origin="EAD-SDO" created="2015-07-03T11:00:00">
     <Gbr>
