@@ -2,5 +2,5 @@ language: python
 script:
   - python -m notam.tests
   - python -m briefing.source.tests
-  - python -m airspace.tests.py
+  - python -m airspace.tests
 
