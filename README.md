@@ -11,4 +11,13 @@ A set of python modules & class created to build applications around NOTAM & Air
 
 The primary target is the paragliding community but other recreational flight activities might find our XCTools usefull.
 
+XCTools are used in the backend of our website [FlyXC.Tools](http://www.flyxc.tools/) but are generic enough to be usefull for other type of application and services.
+
 [Project documentation](https://xctools.readthedocs.io/en/latest/)
+
+---
+
+> **Disclaimer:** I am not a professional programmer. XCTools is an hobby project that I also use to learn
+> more about Python and some of the development best practices out of personnal interrest. 
+> I develop XCTools during my daily commute in the train.
+> I am open for comments & contributions to improve the features and the quality of the project.

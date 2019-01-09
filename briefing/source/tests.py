@@ -1,11 +1,13 @@
 '''Testing the briefing module
 '''
 from __future__ import absolute_import, division, print_function
-from nats import NATS
 
 import unittest
 import datetime
 import logging
+
+from .nats import NATS
+
 logger = logging.getLogger(__name__)
 
 class TestSource(unittest.TestCase):

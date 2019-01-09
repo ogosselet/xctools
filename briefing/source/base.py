@@ -1,10 +1,7 @@
 '''NOTAM Briefing Source (Common Module)
 
 '''
-
 from __future__ import absolute_import, division, print_function
-
-#from datetime import datetime, timedelta
 
 import logging
 import requests

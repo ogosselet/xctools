@@ -9,7 +9,7 @@ XCTools target to support multiple sources to ensure:
 - information reliability: a source might provide more precise information for a specific region (FIRs) of interest
 - service continuity: it is possible that a source change the format of the data and that the XCTools community needs some time to rework the relevant module
 
-=> it is required to be able to switch an application to an alternate source of briefing.
+=> it is required to have the capability to switch quickly an application from one source of briefing to another.
 
 We expect contributions from the community if other sources are required.
 
@@ -25,35 +25,38 @@ Usage
 ^^^^^
 
 .. code-block:: python
->>> from briefing.source.nats import NATS
->>> import datetime
->>>
->>> nats_source = NATS()
->>> # Change this with your own NATS credentials
->>> nats_source.login("username", "password")
->>>
->>> # See Notes for prefilter details
->>> prefilter = { \
->>>    'lower_fl': '0', \
->>>    'upper_fl': '999', \
->>>    'vfr': True, \
->>>    'firs': ['EBBU', 'LFFF'], \
->>>    'utc_from': datetime.datetime(2018, 10, 31, 12, 0), \
->>>    'utc_to': datetime.datetime(2018, 10, 31, 14, 30) \
->>>    }
->>>
->>> # Area Briefing download
->>> nats_source.download_area_briefing(prefilter)
->>>
->>> print(nats_source.raw_area_briefing)
->>> # the downloaded raw area briefing in html
->>>
->>> # Area Briefing parsing
->>> nats_source.parse_area_briefing()
->>>
->>> # Normalized list of NOTAMs
->>> nats_source.parsed_briefing
-[{'a': '', 'upper': '', 'c': '18/12/20 09:00 EST', 'b': '18/10/05 13:13', 'e': 'ATS ROUTE UL745 CLSD', 'src': 'NATS', 'lower': '', 'q': 'EBBU/QARLC/IV/NBO/E/195/660/5130N00326E010', 'sched': '', 'ref': 'A3099/18'}]
+
+    from briefing.source.nats import NATS
+
+    import datetime
+
+    nats_source = NATS()
+
+    # Change this with your own NATS credentials
+    nats_source.login("username", "password")
+
+    # See Notes for prefilter details
+    prefilter = { \
+       'lower_fl': '0', \
+       'upper_fl': '999', \
+       'vfr': True, \
+       'firs': ['EBBU', 'LFFF'], \
+       'utc_from': datetime.datetime(2018, 10, 31, 12, 0), \
+       'utc_to': datetime.datetime(2018, 10, 31, 14, 30) \
+       }
+
+    # Area Briefing download
+    nats_source.download_area_briefing(prefilter)
+
+    print(nats_source.raw_area_briefing) # the downloaded raw area briefing in html
+
+    # Area Briefing parsing
+    nats_source.parse_area_briefing()
+
+    # List of normalized NOTAMs
+    nats_source.parsed_brief
+    #[{'a': '', 'upper': '', 'c': '18/12/20 09:00 EST', 'b': '18/10/05 13:13', 'e': 'ATS ROUTE UL745 CLSD', 'src': 'NATS', 'lower': '', 'q': 'EBBU/QARLC/IV/NBO/E/195/660/5130N00326E010', 'sched': '', 'ref': 'A3099/18'}]
+
 
 Notes
 ^^^^^

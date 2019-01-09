@@ -1,14 +1,14 @@
 from __future__ import absolute_import, division, print_function
 
-from lxml import etree
-#from functools import partial
-from shapely.geometry import Point
-from shapely.ops import transform
+import re
+import logging
 
 import pyproj
-import re
 import simplekml
-import logging
+
+from lxml import etree
+from shapely.geometry import Point
+from shapely.ops import transform
 
 logger = logging.getLogger(__name__)
 
@@ -96,14 +96,14 @@ def compute_distance(geo_pt1, geo_pt2):
     azimuth1, azimuth2, radius2 = geod.inv(geo_pt1[0], geo_pt1[1], geo_pt2[0], geo_pt2[1])
     logger.debug('Computed radius by pyproj only %s', radius2)
 
-def dms2dd(degree, minute, second, decimal):
+def dms2dd(degree, minute, second, decimal=0):
     '''Degree Minute Second (Decimal) => Decimal Degree
 
     Args:
-        degree ([int]): [description]
-        minute ([int]): [description]
-        second ([int]): [description]
-        decimal ([float]): [description]
+        degree ([int]): number or string repr. of integer
+        minute ([int]): number or string repr. of integer
+        second ([int]): number or string repr. of integer
+        decimal ([float]): optional decimal of seconds in the form 0.xxxxx
 
     Returns:
         [float]: the Decimal Degree
@@ -827,7 +827,7 @@ if __name__ == '__main__':
     logger.info('<-- Module %s demo code -->', __file__)
 
     # Open an AIXM 4.5 SRC
-    aixm_source = AixmSource('downloads/EBBU/ebbu_4.5_bis.xml')
+    aixm_source = AixmSource('./downloads/EBBU/ebbu_4.5.xml')
 
     # List all Airpaces present in the source
     all_airspaces = aixm_source.list_airspace_uuid()

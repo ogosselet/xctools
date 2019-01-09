@@ -7,7 +7,7 @@ import unittest
 import datetime
 import logging
 
-from sched_parser import ScheduleParser
+from .sched_parser import ScheduleParser
 
 logger = logging.getLogger(__name__)
 
