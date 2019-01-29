@@ -1,6 +1,10 @@
 Airspace Module
 ===============
 
+This module will provide all the tools required to extract the Airspace information present
+in a specific source (admin info, geo info). It will also provide the tools to generate the polygon
+information required to store the Airspace in a GIS database. 
+
 Geo Coordinates Format
 ----------------------
 
@@ -75,10 +79,14 @@ For Airspace with a reference to the border as show in AIXM extract below:
             <codeDatum>WGE</codeDatum>
             <valCrc>DA2F2D08</valCrc>
         </Avx>
-        <Snip> ... more data </Snip>
+        <Snip> 
+        ... more
+        <Avx></Avx>
+        ...
+        </Snip>
     </Abd>
 
-**Border definition sample**
+**Related border definition sample**
 
 .. code-block:: xml
 
@@ -102,7 +110,9 @@ For Airspace with a reference to the border as show in AIXM extract below:
         <valCrc>DEA229FF</valCrc>
     </Gbv>
     <Snip>
-        ... more <Gbv></Gbv>
+    ... more 
+    <Gbv></Gbv>
+    ...
     </Snip>
     <Gbv>
         <codeType>GRC</codeType>
@@ -120,8 +130,8 @@ For Airspace with a reference to the border as show in AIXM extract below:
     </Gbv>
 
 
-The <Avx> point of type <codeType>FNT is matching quite precisely the geographical border.
-(as it can be confirme using google earth)
+The <Avx> point <codeType>FNT is matching quite precisely the geographical border
+(as it can be confirmed using google earth).
 This point is not in the <Gbv> points of the border definition present in the AIXM source file.
 It is quite easy to isolate the 2 "surrounding" <Gbv> points in the AIXM source file to define
 where the usefull part of the border relevant for our Airspace is starting.

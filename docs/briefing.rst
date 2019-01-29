@@ -2,12 +2,13 @@ Briefing Module
 ===============
 
 Download a Pre-Flight Information Bulletins (PIB) containing published NOTAMs, parse the briefing and create a list of dictionary representation of the NOTAM.
-The resulting data can be used to create `XCTools Notam <./code.html#notam.notam.Notam>`_ objects.
+The resulting data can be used to create `XCTools Notam objects <./code.html#notam.notam.Notam>`_ as describe in the
+related `Notam module <./notam.html>`_ .
 
 XCTools target to support multiple sources to ensure:
 
-- information reliability: a source might provide more precise information for a specific region (FIRs) of interest
-- service continuity: it is possible that a source change the format of the data and that the XCTools community needs some time to rework the relevant module
+- information reliability (a source might provide more precise information for a specific FIRs of interest)
+- service continuity (it is possible that a source change the format of the data and that the XCTools community needs some time to rework the relevant module)
 
 => it is required to have the capability to switch quickly an application from one source of briefing to another.
 
@@ -26,9 +27,9 @@ Usage
 
 .. code-block:: python
 
-    from briefing.source.nats import NATS
-
     import datetime
+
+    from briefing.source.nats import NATS
 
     nats_source = NATS()
 
