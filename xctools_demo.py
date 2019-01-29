@@ -51,6 +51,7 @@ try:
 
     nats_test.parse_area_briefing()
     for notam in nats_test.parsed_briefing:
+        print(notam)
         try:
             nt = Notam(notam)
             print('{} - {} - {}'.format(nt.reference, nt. full_q_line, nt.scope))

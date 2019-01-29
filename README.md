@@ -17,7 +17,8 @@ XCTools are used in the backend of our website [FlyXC.Tools](http://www.flyxc.to
 
 ---
 
-> **Disclaimer:** I am not a professional programmer. XCTools is an hobby project that I also use to learn
-> more about Python and some of the development best practices out of personnal interrest. 
+> **Disclaimer:** I am not a professional software developper. XCTools is an hobby project
+> that allows me to learn more about Python and some of the development best practices out of personnal
+> interrest. 
 > I develop XCTools during my daily commute in the train.
 > I am open for comments & contributions to improve the features and the quality of the project.
