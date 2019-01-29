@@ -1,4 +1,4 @@
-'''NOTAM Schedule Parser
+'''NOTAM notam.sched_parser Module
 
 Raises:
     LexerWarning: Exception raised when a Lexer tokenization error is detected

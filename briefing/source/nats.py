@@ -1,4 +1,4 @@
-'''NOTAM Briefing Source (NATS Module)
+'''NOTAM briefing.source.nats Module
 
 '''
 
@@ -28,10 +28,10 @@ LOGIN_CONFIRM_STRING = "Delivers a briefing containing FIR NOTAM"
 class NATS(NotamSource):
     '''NATS implementation
 
-    The NATS specific class will overwrite all the method as described in the base class documentation
+    The NATS specific class will override all the method as described in the base class documentation
 
     Args:
-        NotamSource ([object]): The NotamSource superclass defining the common interface of all sources
+        NotamSource ([object]): The NotamSource parent class defining the common interface of all sources
 
     Raises:
         UserWarning: [description]
@@ -273,7 +273,7 @@ class NATS(NotamSource):
         abc_line = line_dict['abc_line'].replace('\n', ' ')
 
         # Extracting A)
-        a_match = re.search(r'(A\)) (.*) (B\))', abc_line)
+        a_match = re.search(r'(A\)) (.*)  (B\))', abc_line)
         if a_match:
             final_notam['a'] = a_match.group(2)
         else:

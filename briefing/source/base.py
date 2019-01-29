@@ -1,4 +1,8 @@
-'''NOTAM Briefing Source (Common Module)
+'''NOTAM briefing.source.base Module
+
+Provides "public" method to define a simple and stable object interface and orchestrate
+"_private" method that every specific source class should override to implement 
+the specific business logic of the source
 
 '''
 from __future__ import absolute_import, division, print_function
@@ -11,17 +15,8 @@ logger = logging.getLogger(__name__)
 class NotamSource(object):
     '''Briefing Source base class implementation
 
-    Args:
-        object ([type]): [description]
-
     Raises:
-        NotImplementedError: [description]
-        NotImplementedError: [description]
-        NotImplementedError: [description]
-        NotImplementedError: [description]
-
-    Returns:
-        [type]: [description]
+        NotImplementedError: raised if the child class has not implemented the overriding of the method
     '''
 
 
@@ -41,7 +36,6 @@ class NotamSource(object):
         Args:
             username ([string]): credentials information
             password ([string]): credentials information
-
         '''
 
         logger.debug("Login to the source")
@@ -50,13 +44,14 @@ class NotamSource(object):
         self._login_sequence()
 
     def _login_sequence(self):
-        '''Perform the business logic required to login a user for the specific source.
+        '''Should be overrided to perform the business logic required to login a user 
+        for the specific source.
 
         The full sequence required to login a user to a specific source.
         This could just be a "pass" if no login is required.
 
         Raises:
-            NotImplementedError: exception raised if the method is not implemented in the specific source subclass
+            NotImplementedError: raised if the child class has not implemented the overriding of the method
         '''
 
         raise NotImplementedError("User Login sequence not implemented for this source")
@@ -68,17 +63,16 @@ class NotamSource(object):
 
         Args:
             prefilter ([dict]): a dictionary with key/value supported by the source to filter NOTAM
-                                added to the briefing (see the specific source class documentation)
-        Todo:
-            persist the raw data in the selected destination (local, s3, ...)
+                added to the briefing (see the specific source class documentation)
         '''
 
+        #TODO: persist the raw data in the selected destination (local, s3, ...)
         logger.debug("Download area briefing")
         self.prefilter = prefilter
         self._download_area_briefing()
 
     def _download_area_briefing(self):
-        '''Perform the business logic required to download a briefing for the specific source.
+        '''Should be overrided to perform the business logic required to download a briefing for the specific source.
 
         Raises:
             NotImplementedError: exception raised if the method is not implemented in the specific source subclass
@@ -95,7 +89,7 @@ class NotamSource(object):
         self._parse_area_briefing()
 
     def _parse_area_briefing(self):
-        '''Perform the business logic required to parse the briefing raw data for the specific source.
+        '''Should be overrided to perform the business logic required to parse the briefing raw data for the specific source.
 
         Raises:
             NotImplementedError: exception raised if the method is not implemented in the specific source subclass
@@ -104,16 +98,15 @@ class NotamSource(object):
         raise NotImplementedError("Area briefing parser not available for this source")
 
     def logout(self):
-        '''Trigger the login operation required by the source.
+        '''Trigger the logout operation required by the source.
 
         After the execution of this method, the user access to the source data should not be possible.
-
         '''
         logger.debug("Logout from the source")
         self._logout()
 
     def _logout(self):
-        '''Perform the business logic required to logout from the specific source.
+        '''Should be overrided to perform the business logic required to logout from the specific source.
 
         Raises:
             NotImplementedError: exception raised if the method is not implemented in the specific source subclass
@@ -124,16 +117,12 @@ class NotamSource(object):
     def check_active_session(self):
         '''Test is there is a active session with the specific source
 
-        Todo:
-            This could be usefull if the program wants to create a persistent NotamSource object
-            but that the session could timeout.
-            By checking pro-activly if the session is still active it might be better than having
-            to react on an unexpected error
-
         Returns:
-            [Boolean]: True if there is an active session
+            Bool: True if there is an active session
         '''
 
+        #TODO: This could be usefull if the program wants to create a persistent NotamSource object but that the session could timeout.
+        #TODO: By checking pro-activly if the session is still active it might be better than having to react on an unexpected error
         return True
 
 
