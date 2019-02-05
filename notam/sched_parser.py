@@ -777,6 +777,7 @@ class ScheduleParser():
         self.parser = yacc.yacc(module=self, write_tables=0, errorlog=yacc.NullLogger())
         logger.debug('ScheduleParser: LEX/YAC ready')
 
+
         # All _private attributes to store "partial" timeslot information & parser status flag
         self._store_month = '' # The latest month discovered by the parser
         self._store_dates = []

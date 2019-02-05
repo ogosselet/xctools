@@ -94,6 +94,7 @@ class TestScheduleParser(unittest.TestCase):
 
             self.assertEqual(test.get_schedule(), test_data['expected_output'])
 
+
 class TestNotam(unittest.TestCase):
 
     def test_notam(self):
