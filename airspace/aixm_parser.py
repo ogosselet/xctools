@@ -192,6 +192,78 @@ def format_decimal_degree(coordinate_string):
         )
     #TODO: Raise an exception if we received a format not supported
 
+
+class GisPoint(object):
+
+    __lat = None
+    __long = None
+    __crc = None
+    __precision = 5
+
+    def __init__(self,lat,lon,crc):
+        self.set_lon(lon)
+        self.set_lat(lat)
+        self.set_crc(crc)
+
+    def truncate(self,f, n):
+        '''Truncates/pads a float f to n decimal places without rounding'''
+        s = '{}'.format(f)
+        if 'e' in s or 'E' in s:
+            return '{0:.{1}f}'.format(f, n)
+        i, p, d = s.partition('.')
+        return '.'.join([i, (d + '0' * n)[:n]])
+
+    def set_lon(self,lon):
+
+        self.lon = float(self.truncate(lon,self.__precision))
+
+    def get_lon(self):
+        return self.lon
+
+    def set_lat(self,lat):
+        self.__lat = float(self.truncate(lat,self.__precision))
+
+    def get_lat(self):
+        return self.__lat
+
+    def set_crc(self,crc):
+        self.__crc =crc
+
+    def get_crc(self):
+        return self.__crc
+
+    def __str__(self):
+        return '[' + str(self.lon) +', ' + str(self.__lat) + ', ' + str(self.__crc) + ']'
+
+    # Now you can compare if 2 GisPoint are equals (== or assertEqual() )
+    # if we implement __lt__, __le__, __gt__ and __ge__ GisPoint could be sortable (don't know if it is use full)
+    def __eq__(self,other):
+
+        return (self.get_lon() == other.get_lon())and(self.get_lat()==other.get_lat())and (self.get_crc() == other.get_crc())
+
+class GisDataFactory(object):
+
+
+    @staticmethod
+    def parse_element(self,xml_element,ase_uid):
+        gis_data = []
+        if xml_element[0].xpath('Circle'):
+            # do stuffs with circles not sure what is returned in that case
+            logger.debug('Circle geometry detected')
+        elif xml_element[0].xpath('Avx'):
+            #do stuff with Avx
+            logger.debug('Free geometry detected')
+            for avx_elem in xml_element[0].xpath('Avx'):
+                # Willingly over simplified for code clarity (this is a proof of concept before optional rewrite)
+                if avx_elem.xpath('codeType/text()')[0] == 'GRC':
+                    gis_point = GisPoint(format_decimal_degree(avx_elem.xpath('geoLat/text()')[0]),
+                        format_decimal_degree(avx_elem.xpath('geoLong/text()')[0]),
+                        avx_elem.xpath('valCrc/text()')[0])
+                    gis_data.append(gis_point)
+        else:
+            raise AirspaceGeomUnknown(self, ase_uid)
+        return gis_data
+
 class Airspace(object):
     '''Airspace Interface Abstraction Class
 
@@ -316,13 +388,16 @@ class AixmSource(object):
 
 
         abd_elem = self.tree.xpath('//Abd[AbdUid[AseUid[@mid="' + ase_uid + '"]]]')
+        # TODO: I would return GisDataFactory.parse_element(abd_elem, ase_uid) here => end of method
         if abd_elem[0].xpath('Avx'):
             print(abd_elem[0].xpath('Avx'))
             logger.debug('Free geometry detected')
+            # TODO: L.R: slows down everything better to pass the xml element rather than parsing again (see sub method call)
             return self._airspace_free_geometry(ase_uid)
 
         if abd_elem[0].xpath('Circle'):
             logger.debug('Circle geometry detected')
+            # TODO: L.R: slows down everything better to pass the xml element rather than parsing again (see sub method call)
             return self._airspace_circle_geometry(ase_uid)
 
         raise AirspaceGeomUnknown(self, ase_uid)
@@ -354,7 +429,8 @@ class AixmSource(object):
         self._prepare_arc_lookup((arc_center[0], arc_center[1]), arc_radius)
         return self._arc_lookup
 
-
+    # TODO: that looks like a Factory pattern : https://www.tutorialspoint.com/design_pattern/factory_pattern.htm
+    # TODO : see GisDataFactory class for implementation idea
     def _airspace_free_geometry(self, ase_uid):
         '''Create a polygon for a Free geometry
 
