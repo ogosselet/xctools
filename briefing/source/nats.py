@@ -217,7 +217,7 @@ class NATS(NotamSource):
 
         # ToDo: Check that the result looks valid, if not raise an exception ?
         self.raw_area_briefing = r.content
-
+        
         #file_briefing = open("briefing.html", "w")
         #file_briefing.write(r.content)
         #file_briefing.close()
