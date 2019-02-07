@@ -245,7 +245,7 @@ class GisDataFactory(object):
 
 
     @staticmethod
-    def parse_element(self,xml_element,ase_uid):
+    def parse_element(self, xml_element, ase_uid):
         gis_data = []
         if xml_element[0].xpath('Circle'):
             # do stuffs with circles not sure what is returned in that case
