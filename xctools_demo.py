@@ -45,8 +45,8 @@ try:
 
     # The source of the data is an "offline" file for dev only.
     # out = nats_test.download_area_briefing(prefilter)
-    file_briefing = open("briefing.html", "r")
-    nats_test.raw_area_briefing = file_briefing.read()
+    file_briefing = open("briefing/source/tests/nats.html", "r")
+    nats_test.raw_area_briefing = file_briefing.read().encode('utf-8')
     file_briefing.close()
 
     nats_test.parse_area_briefing()
