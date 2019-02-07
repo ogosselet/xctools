@@ -1,4 +1,6 @@
 language: python
+python:
+  - "3.6"
 script:
   - python -m notam.tests
   - python -m briefing.source.tests
