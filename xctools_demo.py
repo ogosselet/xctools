@@ -29,7 +29,7 @@ try:
     # Means we only get a NATS object that we can use to retrieve information if the 
     # login_sequence was completed successfully
 
-    #logged_in = nats_test.login("source_username", "source_password")
+    # logged_in = nats_test.login("source_username", "source_password")
     logger.debug("NATS: User logged in")
 
     prefilter = {
