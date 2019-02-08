@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 import unittest
 import logging
 
-from aixm_parser import format_decimal_degree, Airspace, AixmSource, GisPoint
+from .aixm_parser import format_decimal_degree, Airspace, AixmSource, GisPoint
 
 logger = logging.getLogger(__name__)
 
