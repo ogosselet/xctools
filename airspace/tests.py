@@ -76,7 +76,7 @@ class TestAixmParser(unittest.TestCase):
 
     def test_airspace_geometry(self):
 
-        aixm_source = AixmSource('tests/aixm_4.5_extract.xml')
+        aixm_source = AixmSource('airspace/tests/aixm_4.5_extract.xml')
 
         for airspace_test in AIRSPACE_TESTS:
             airspace = Airspace(aixm_source, airspace_test['ase_uid'])
