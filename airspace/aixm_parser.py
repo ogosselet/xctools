@@ -9,7 +9,8 @@ import simplekml
 from lxml import etree
 from shapely.geometry import Point
 from shapely.ops import transform
-
+from .geometry import GisUtil
+from .exceptions import AirspaceGeomUnknown
 logger = logging.getLogger(__name__)
 
 geod = pyproj.Geod(ellps='WGS84')
@@ -24,19 +25,19 @@ CIRCLE_GEOM = 2
 
 
 class Airspace(object):
-    '''Airspace Interface Abstraction Class
+    """Airspace Interface Abstraction Class
 
     Implement a common set of Airspace method independant from the Source of the Airspace information
-    '''
+    """
 
 
     def __init__(self, source, uuid):
-        '''Init Method creating a new XCTools Airspace object
+        """Init Method creating a new XCTools Airspace object
 
         Args:
             source ([object]): a supported Airspace[description]
             uuid ([string]): a unique id of the source for the file we are trying to extract
-        '''
+        """
 
         self.source = source
         self.uuid = uuid
@@ -44,27 +45,27 @@ class Airspace(object):
         self.gis_data = None
 
     def parse_airspace(self):
-        '''Execute the parsing of the Airspace to extract Admin & GIS data
-        '''
+        """Execute the parsing of the Airspace to extract Admin & GIS data
+        """
 
         logger.debug('Parsing Airspace')
         self.admin_data = self.source.airspace_admin_data(self.uuid)
         self.gis_data = self.source.airspace_geometry_data(self.uuid)
 
 class AixmSource(object):
-    '''Class to process Airspace information contained in an AIXM 4.5 source file
+    """Class to process Airspace information contained in an AIXM 4.5 source file
 
     This class should implement all the method expected by the Airspace class to
     collect all the relevant information present in the source (admin info, geo info, ...)
     and normalize the return data to our XCTools format
-    '''
+    """
 
     def  __init__(self, filename):
-        '''Initialize the AIXM source
+        """Initialize the AIXM source
 
         Args:
             filename ([type]): the file system file containing the AIXM 4.5 Airspace Informations
-        '''
+        """
 
         self.filename = filename
         self.tree =  etree.parse(self.filename)
@@ -76,7 +77,7 @@ class AixmSource(object):
         self.grc_buf = ['','']
 
     def list_airspace_uuid(self):
-        '''List all Airspace contained in the specific source file
+        """List all Airspace contained in the specific source file
 
         Interface method that needs to be implemented for any source
 
@@ -84,7 +85,7 @@ class AixmSource(object):
             list: list of dictionary {'uuid': file_specific_uuid , 'name': airspace_name }
                   The 'name' is provided for convenience or to be used as a natural key
                   across multiple AIXM file if 'uuid' is not maintained (time or source)
-        '''
+        """
 
         tmp = []
 
@@ -104,14 +105,14 @@ class AixmSource(object):
 #            print('CODE: {}'.format(avx.xpath('codeType/text()')[0]))
 
     def airspace_admin_data(self, ase_uid):
-        '''Extract & normalize the Airspace Admin data
+        """Extract & normalize the Airspace Admin data
 
         Args:
             ase_uid ([string]): The UUID ot the Airspace
 
         Returns:
             [dict]: the Airspace Admin data as a dictionary
-        '''
+        """
 
         #TODO: continue to extract all admin data of the Airspace
         #TODO: more formating expected
@@ -121,7 +122,7 @@ class AixmSource(object):
         ase_elem = self.tree.xpath('//Ase[AseUid[@mid="' + ase_uid + '"]]')
         admin_data['codeId'] = ase_elem[0].xpath('AseUid/codeId/text()')[0]
         admin_data['txtName'] = ase_elem[0].xpath('AseUid/codeId/text()')[0]
-        admin_data['upper'] = format_vertical_limit(
+        admin_data['upper'] = GisUtil.format_vertical_limit(
             code=ase_elem[0].xpath('codeDistVerUpper/text()')[0],
             value=ase_elem[0].xpath('valDistVerUpper/text()')[0],
             unit=ase_elem[0].xpath('uomDistVerUpper/text()')[0]
@@ -131,7 +132,7 @@ class AixmSource(object):
         return admin_data
 
     def airspace_geometry_data(self, ase_uid):
-        '''Extract & normalize the Airspace GIS data
+        """Extract & normalize the Airspace GIS data
 
         TODO: cover the creation of the polygon in WKT to make the consumption easier
 
@@ -143,7 +144,7 @@ class AixmSource(object):
 
         Returns:
             [list]: the Airspace GIS data as a list of coordinates that can be used to create a "Polygon"
-        '''
+        """
 
 
         abd_elem = self.tree.xpath('//Abd[AbdUid[AseUid[@mid="' + ase_uid + '"]]]')
@@ -162,26 +163,26 @@ class AixmSource(object):
         raise AirspaceGeomUnknown(self, ase_uid)
 
     def _airspace_circle_geometry(self, ase_uid):
-        '''Create a polygon for a Circle geometry
+        """Create a polygon for a Circle geometry
 
         Args:
             ase_uid ([string]): The UUID ot the Airspace
 
         Returns:
             [list]: a list of coordinates that can be used to create a "Polygon"
-        '''
+        """
 
         abd_elem = self.tree.xpath('//Abd[AbdUid[AseUid[@mid="' + ase_uid + '"]]]')
         circle_elem = abd_elem[0].xpath('Circle')[0]
 
         # Collect the center & the radius of the Circle
         arc_center = [
-            format_decimal_degree(circle_elem.xpath('geoLatCen/text()')[0]),
-            format_decimal_degree(circle_elem.xpath('geoLongCen/text()')[0]),
+            GisUtil.format_decimal_degree(circle_elem.xpath('geoLatCen/text()')[0]),
+            GisUtil.format_decimal_degree(circle_elem.xpath('geoLongCen/text()')[0]),
             circle_elem.xpath('valCrc/text()')[0]]
 
         # Collect the radius
-        arc_radius = format_geo_size(
+        arc_radius = GisUtil.format_geo_size(
             value=circle_elem.xpath('valRadius/text()')[0],
             unit=circle_elem.xpath('uomRadius/text()')[0])
 
@@ -191,7 +192,7 @@ class AixmSource(object):
     # TODO: that looks like a Factory pattern : https://www.tutorialspoint.com/design_pattern/factory_pattern.htm
     # TODO : see GisDataFactory class for implementation idea
     def _airspace_free_geometry(self, ase_uid):
-        '''Create a polygon for a Free geometry
+        """Create a polygon for a Free geometry
 
         Free geometry are made of points, border points, arc of circle
 
@@ -200,7 +201,7 @@ class AixmSource(object):
 
         Returns:
             [list]: a list of coordinates that can be used to create a "Polygon"
-        '''
+        """
 
         grc_buffer = ['', '']
         avx_function_buffer = ['', '']
@@ -221,8 +222,8 @@ class AixmSource(object):
 
             # Collect next point
             grc_buffer[1] = [
-                    format_decimal_degree(avx_elem.xpath('geoLat/text()')[0]),
-                    format_decimal_degree(avx_elem.xpath('geoLong/text()')[0]),
+                    GisUtil.format_decimal_degree(avx_elem.xpath('geoLat/text()')[0]),
+                    GisUtil.format_decimal_degree(avx_elem.xpath('geoLong/text()')[0]),
                     avx_elem.xpath('valCrc/text()')[0]
                 ]
 
@@ -245,12 +246,12 @@ class AixmSource(object):
 
                 # Collect the center & the radius of the Circle Arc
                 arc_center = [
-                    format_decimal_degree(avx_elem.xpath('geoLatArc/text()')[0]),
-                    format_decimal_degree(avx_elem.xpath('geoLongArc/text()')[0]),
+                    GisUtil.format_decimal_degree(avx_elem.xpath('geoLatArc/text()')[0]),
+                    GisUtil.format_decimal_degree(avx_elem.xpath('geoLongArc/text()')[0]),
                     avx_elem.xpath('valCrc/text()')[0]
                 ]
 
-                arc_radius = format_geo_size(
+                arc_radius = GisUtil.format_geo_size(
                     value=avx_elem.xpath('valRadiusArc/text()')[0],
                     unit=avx_elem.xpath('uomRadiusArc/text()')[0]
                 )
@@ -260,12 +261,12 @@ class AixmSource(object):
 
                 # Collect the center & the radius of the Circle Arc
                 arc_center = [
-                    format_decimal_degree(avx_elem.xpath('geoLatArc/text()')[0]),
-                    format_decimal_degree(avx_elem.xpath('geoLongArc/text()')[0]),
+                    GisUtil.format_decimal_degree(avx_elem.xpath('geoLatArc/text()')[0]),
+                    GisUtil.format_decimal_degree(avx_elem.xpath('geoLongArc/text()')[0]),
                     avx_elem.xpath('valCrc/text()')[0]
                 ]
 
-                arc_radius = format_geo_size(
+                arc_radius = GisUtil.format_geo_size(
                     value=avx_elem.xpath('valRadiusArc/text()')[0],
                     unit=avx_elem.xpath('uomRadiusArc/text()')[0]
                 )
@@ -324,7 +325,7 @@ class AixmSource(object):
         return gis_data
 
     def extract_arc_points(self, direction, arc_center, arc_radius, arc_start, arc_stop):
-        '''Extract a subset of Circle points forming a specific Arc of Circle
+        """Extract a subset of Circle points forming a specific Arc of Circle
 
         TODO: confirm the arc_radius needs to be in meter
 
@@ -337,7 +338,7 @@ class AixmSource(object):
 
         Returns:
             [list]: a list of coordinates that can be used to create a "Polygon"
-        '''
+        """
 
         logger.debug('Extracting Arc')
 
@@ -354,12 +355,12 @@ class AixmSource(object):
 
 
     def _prepare_arc_lookup(self, arc_center, arc_radius):
-        '''Circle points indexed "lookup" structure
+        """Circle points indexed "lookup" structure
 
         Args:
             arc_center ([lat, long]): the The geo coord. (lat/long) of the Circle center
             arc_radius ([float]): the radius of the Circle
-        '''
+        """
 
         # Cleanup to remove any previous circle "lookup" data from a previous circle
         logger.debug('Cleaning up the arc lookup structure')
@@ -372,7 +373,7 @@ class AixmSource(object):
             self._arc_lookup.append([point[1],point[0], i])
 
     def _get_idx_around_arc_point(self, latitude, longitude):
-        '''Define the index of the 2 circle points that are the closest from a POI (lat, long).
+        """Define the index of the 2 circle points that are the closest from a POI (lat, long).
 
         The POI is on or very close from the circle.
         We measure the distance between 2 point and our POI as follow using Pythagore
@@ -394,7 +395,7 @@ class AixmSource(object):
 
         Returns:
             [tupple]: the 2 index of the circle points surrounding our POI
-        '''
+        """
 
 
         logger.debug('Finding position on Arc for Lat:%s / Long:%s', latitude, longitude)
@@ -424,13 +425,13 @@ class AixmSource(object):
         return (idx_left, idx_right)
 
     def _get_arc_points(self, direction, idx_start, idx_stop):
-        '''Get the subset of the Arc point in the good direction
+        """Get the subset of the Arc point in the good direction
 
         Args:
             direction (-1, 1): counter-clockwise=-1, clockwise=1 
             index_start ([tupple]): the index of the 2 points around our first border point
             index_stop ([type]): the index of the 2 points around our last border point
-        '''
+        """
 
         # Remember that index_ are still tupple for now.
         # Let's first define the direction in which need to navigate the border
@@ -471,7 +472,7 @@ class AixmSource(object):
             return list(reversed(self._arc_lookup[start:stop]))
 
     def extract_border_points(self, gbr_uid, border_start, border_stop):
-        '''Get the subset of the relevant border point betwwen a start/stop border points
+        """Get the subset of the relevant border point betwwen a start/stop border points
         
         Similar to the circle case, the border POI are close from the border but will
         most likely not exist as a border points in the AIXM source
@@ -483,7 +484,7 @@ class AixmSource(object):
         
         Returns:
             [list]: a list of coordinates that can be used to create an important line of the Airspace polygon (i.e the border)
-        '''
+        """
 
         logger.debug('Extracting border <GbrUid mid=%s>', gbr_uid)
 
@@ -501,11 +502,11 @@ class AixmSource(object):
         return self._get_border_points(index_start, index_stop)
 
     def _prepare_border_lookup(self, gbr_uid):
-        '''Border points indexed "lookup" structure
+        """Border points indexed "lookup" structure
 
         Args:
             gbr_uid ([string]): the UUID of the specific border segment in the source
-        '''
+        """
 
         # The <Gbr>
         gbr_elem = self.tree.xpath('//Gbr[GbrUid[@mid="' + gbr_uid + '"]]')
@@ -516,13 +517,13 @@ class AixmSource(object):
         for gbv_elem in gbv_elems:
             # We need to be sure the points are coded in decimal degree
             # If not, we transform them
-            geo_lat = format_decimal_degree(gbv_elem.xpath('geoLat/text()')[0])
-            geo_long = format_decimal_degree(gbv_elem.xpath('geoLong/text()')[0])
+            geo_lat = GisUtil.format_decimal_degree(gbv_elem.xpath('geoLat/text()')[0])
+            geo_long = GisUtil.format_decimal_degree(gbv_elem.xpath('geoLong/text()')[0])
             val_crc = gbv_elem.xpath('valCrc/text()')[0]
             self._border_lookup.append([geo_lat, geo_long, val_crc])
 
     def _get_crc_around_border_point(self, latitude, longitude):
-        '''Define the CRC of the 2 border points that are the closest from a POI (lat, long).
+        """Define the CRC of the 2 border points that are the closest from a POI (lat, long).
 
         The POI is on or very close from the border.
         We measure the distance between 2 point and our POI as follow using Pythagore
@@ -545,7 +546,7 @@ class AixmSource(object):
 
         Returns:
             [tupple]: the 2 CRC index of the border points surrounding our POI
-        '''
+        """
 
         # Iterate over all the border points skipping the first one
         logger.debug('Finding position on border for Lat:%s / Long:%s', latitude, longitude)
@@ -571,7 +572,7 @@ class AixmSource(object):
         return (crc_left, crc_right)
 
     def _get_border_point_index(self, val_crc):
-        '''Lookup the index of the border points based on the CRC value of the points
+        """Lookup the index of the border points based on the CRC value of the points
         
         TODO: There is probably a more pythonic way to perform this lookup in a list
 
@@ -580,7 +581,7 @@ class AixmSource(object):
         
         Returns:
             [tuple]: the index value of the border points in our lookup structure 
-        '''
+        """
 
         for index, border_point in enumerate(self._border_lookup):
             if border_point[2] == val_crc[0]:
@@ -593,12 +594,12 @@ class AixmSource(object):
         return (index_left, index_right)
 
     def _get_border_points(self, index_start, index_stop):
-        '''Extract the subset of the border points in the good direction
+        """Extract the subset of the border points in the good direction
 
         Args:
             index_start ([tupple]): the index of the 2 points around our first border point
             index_stop ([tupple]): the index of the 2 points around our last border point
-        '''
+        """
 
         # Remember that index_ are still tupple for now.
         # Let's first define the direction in which need to navigate the border
@@ -617,7 +618,7 @@ class AixmSource(object):
             return list(reversed(self._border_lookup[stop:start]))
 
     def _create_circle(self, center_point, radius):
-        '''Create a circle on Earth 
+        """Create a circle on Earth 
 
         Circle drawn in normal Cartesian geometry by shapely becomes Ellipsoid on Earth
 
@@ -626,7 +627,7 @@ class AixmSource(object):
         Args:
             center_point ([type]): [description]
             radius ([type]): [description]
-        '''
+        """
 
 
         logger.debug('Circle Creation')
