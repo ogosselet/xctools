@@ -1,26 +1,22 @@
 from __future__ import absolute_import, division, print_function
 
-import re
 import logging
 
+import lxml
 import pyproj
 import simplekml
-
-from lxml import etree
 from shapely.geometry import Point
 from shapely.ops import transform
-from .geometry import GisUtil
+
 from .exceptions import AirspaceGeomUnknown
+from .geometry import GisUtil
+
 logger = logging.getLogger(__name__)
 
 geod = pyproj.Geod(ellps='WGS84')
 
 FREE_GEOM = 1
 CIRCLE_GEOM = 2
-
-
-
-
 
 
 
@@ -68,7 +64,7 @@ class AixmSource(object):
         """
 
         self.filename = filename
-        self.tree =  etree.parse(self.filename)
+        self.tree = lxml.etree.parse(self.filename)
         self.airspace_mids = []
         self._border_lookup = []
         self._arc_lookup = []
