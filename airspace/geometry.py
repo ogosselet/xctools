@@ -1,10 +1,13 @@
-import re
+from __future__ import absolute_import, division, print_function
+
 import logging
+import re
+
 import pyproj
+from shapely.geometry import Point
 
 from .exceptions import AirspaceGeomUnknown
-from __future__ import absolute_import, division, print_function
-from shapely.geometry import Point
+from .interfaces import GisPoint
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +18,15 @@ CIRCLE_GEOM = 2
 
 
 class GisUtil:
+
+    @staticmethod
+    def truncate(f, n):
+        """Truncates/pads a float f to n decimal places without rounding"""
+        s = '{}'.format(f)
+        if 'e' in s or 'E' in s:
+            return '{0:.{1}f}'.format(f, n)
+        i, p, d = s.partition('.')
+        return float('.'.join([i, (d + '0' * n)[:n]]))
 
     @staticmethod
     def format_vertical_limit(code, value, unit):
@@ -150,51 +162,58 @@ class GisUtil:
         # TODO: Raise an exception if we received a format not supported
 
 
-class GisPoint(object):
-    __lat = None
-    __long = None
-    __crc = None
-    __precision = 5
+class FloatGisPoint(GisPoint):
+    __accuracy = None
 
-    def __init__(self, lat, lon, crc):
-        self.set_lon(lon)
-        self.set_lat(lat)
-        self.set_crc(crc)
-
-    def truncate(self, f, n):
-        """Truncates/pads a float f to n decimal places without rounding"""
-        s = '{}'.format(f)
-        if 'e' in s or 'E' in s:
-            return '{0:.{1}f}'.format(f, n)
-        i, p, d = s.partition('.')
-        return '.'.join([i, (d + '0' * n)[:n]])
+    def __init__(self, lat, lon, accuracy=5):
+        self.__accuracy = accuracy
+        super().__init__(lat, lon)
 
     def set_lon(self, lon):
-        self.lon = float(self.truncate(lon, self.__precision))
+        self._lon = GisUtil.truncate(lon, self.__accuracy)
 
     def get_lon(self):
-        return self.lon
+        return self._lon
 
     def set_lat(self, lat):
-        self.__lat = float(self.truncate(lat, self.__precision))
+        self._lat = GisUtil.truncate(lat, self.__accuracy)
 
     def get_lat(self):
-        return self.__lat
-
-    def set_crc(self, crc):
-        self.__crc = crc
-
-    def get_crc(self):
-        return self.__crc
+        return self._lat
 
     def __str__(self):
-        return '[' + str(self.lon) + ', ' + str(self.__lat) + ', ' + str(self.__crc) + ']'
+        return '[' + str(self._lon) + ', ' + str(self._lat) + ']'
 
     # Now you can compare if 2 GisPoint are equals (== or assertEqual() )
     # if we implement __lt__, __le__, __gt__ and __ge__ GisPoint could be sortable (don't know if it is use full)
     def __eq__(self, other):
-        return (self.get_lon() == other.get_lon()) and (self.get_lat() == other.get_lat()) and (
-                    self.get_crc() == other.get_crc())
+        return (self.get_lon() == other.get_lon()) and (self.get_lat() == other.get_lat())
+
+
+class DmsGisPoint(GisPoint):
+
+    def __init__(self, lat, lon):
+        super().__init__(lat, lon)
+
+    def set_lon(self, lon):
+        self._lon = lon
+
+    def get_lon(self):
+        return self._lon
+
+    def set_lat(self, lat):
+        self._lat = lat
+
+    def get_lat(self):
+        return self._lat
+
+    def __str__(self):
+        return '[' + str(self._lon) + ', ' + str(self._lat) + ']'
+
+    # Now you can compare if 2 GisPoint are equals (== or assertEqual() )
+    # if we implement __lt__, __le__, __gt__ and __ge__ GisPoint could be sortable (don't know if it is use full)
+    def __eq__(self, other):
+        return (self.get_lon() == other.get_lon()) and (self.get_lat() == other.get_lat())
 
 
 class GisDataFactory(object):
