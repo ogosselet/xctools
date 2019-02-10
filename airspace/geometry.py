@@ -169,25 +169,39 @@ class FloatGisPoint(GisPoint):
         self.__accuracy = accuracy
         super().__init__(lat, lon)
 
-    def set_lon(self, lon):
-        self._lon = GisUtil.truncate(lon, self.__accuracy)
+    def set_float_lon(self, lon):
+        self._float_lon = GisUtil.truncate(lon, self.__accuracy)
 
-    def get_lon(self):
-        return self._lon
+    def get_float_lon(self):
+        return self._float_lon
 
-    def set_lat(self, lat):
-        self._lat = GisUtil.truncate(lat, self.__accuracy)
+    def set_float_lat(self, lat):
+        self._float_lat = GisUtil.truncate(lat, self.__accuracy)
 
-    def get_lat(self):
-        return self._lat
+    def get_float_lat(self):
+        return self._float_lat
+
+    def set_dms_lon(self, lon):
+        pass
+
+    def get_dms_lon(self):
+        return self._dms_lon
+
+    def set_dms_lat(self, lat):
+        pass
+
+    def get_dms_lat(self):
+        return self._dms_lat
 
     def __str__(self):
-        return '[' + str(self._lon) + ', ' + str(self._lat) + ']'
+        return '[' + str(self._float_lon) + ', ' + str(self._float_lat) + ']'
 
     # Now you can compare if 2 GisPoint are equals (== or assertEqual() )
     # if we implement __lt__, __le__, __gt__ and __ge__ GisPoint could be sortable (don't know if it is use full)
     def __eq__(self, other):
-        return (self.get_lon() == other.get_lon()) and (self.get_lat() == other.get_lat())
+        return (self.get_float_lon() == other.get_float_lon()) and (
+                self.get_float_lat() == other.get_float_lat()) and (
+                       self.get_dms_lon() == other.get_dms_lon()) and (self.get_dms_lat() == other.get_dms_lat())
 
 
 class DmsGisPoint(GisPoint):
