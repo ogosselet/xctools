@@ -2,8 +2,8 @@
 '''
 from __future__ import absolute_import, division, print_function
 
-import unittest
 import logging
+import unittest
 
 from .aixm_parser import format_decimal_degree, Airspace, AixmSource, GisPoint
 

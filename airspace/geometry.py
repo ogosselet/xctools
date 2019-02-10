@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
+import math
 import re
 
 import pyproj
@@ -78,6 +79,43 @@ class GisUtil:
         """
 
         return float(degree) + float(minute) / 60 + float(second) / 3600 + float(decimal) / 3600
+
+    @staticmethod
+    def dd2dms(dd, is_longitude):
+        """Decimal Degree => Degree Minute Second (Decimal)
+
+        Args:
+            dd ([float]):  floating point decimal repr.
+            is_longitude([boolean]):  boolean that indicate whether dd is longitude or latitude.
+        Returns:
+            [string]: string representation of the decimal coordinate
+        """
+        split_deg = math.modf(dd)
+        degrees = int(split_deg[1])
+        minutes = abs(int(math.modf(split_deg[0] * 60)[1]))
+        seconds = abs(round(math.modf(split_deg[0] * 60)[0] * 60, 2))
+
+        minutes_fmt = '{0:02d}'.format(minutes)
+
+        sec_decim, sec_int = math.modf(seconds)
+
+        seconds_fmt = '{0:02d}'.format(int(sec_int))
+        seconds_fmt += '.'
+        seconds_fmt += '{0:.2f}'.format(sec_decim).split('.')[1]
+        if is_longitude:
+            degrees_fmt = '{0:03d}'.format(degrees)
+            if degrees < 0:
+                suffix = "W"
+            else:
+                suffix = "E"
+        else:
+            degrees_fmt = '{0:02d}'.format(degrees)
+            if degrees < 0:
+                suffix = "S"
+            else:
+                suffix = "N"
+
+        return degrees_fmt + minutes_fmt + seconds_fmt + suffix
 
     @staticmethod
     def format_decimal_degree(coordinate_string):
