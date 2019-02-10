@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 import logging
 import unittest
 
-from .aixm_parser import format_decimal_degree, Airspace, AixmSource, GisPoint
+from .aixm_parser import format_decimal_degree, Airspace, AixmSource
 
 logger = logging.getLogger(__name__)
 
@@ -82,12 +82,6 @@ class TestAixmParser(unittest.TestCase):
             airspace = Airspace(aixm_source, airspace_test['ase_uid'])
             airspace.parse_airspace()
             self.assertEqual(airspace.gis_data, airspace_test['gis_data'])
-    # Demonstrates GisPoint equality after truncating precicion
-    def test_gis_points(self):
-        a =GisPoint (50.1234567890123,4.1234567890123, 52)
-        b = GisPoint(50.1234567890023, 4.1234567890023, 52)
-        print (a)
-        self.assertEqual(a,b)
 
 
 if __name__ == '__main__':

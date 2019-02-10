@@ -11,41 +11,29 @@ class GisPoint(ABC):
         super().__init__()
 
     @abstractmethod
-    def set_float_lon(self, lon):
+    def set_lon(self, lon):
         pass
 
     @abstractmethod
-    def get_float_lon(self):
-        pass
-
-    @abstractmethod
-    def set_float_lat(self, lat):
-        pass
-
-    @abstractmethod
-    def get_float_lat(self):
-        pass
-
-    @abstractmethod
-    def set_dms_lon(self, lon):
-        pass
-
-    @abstractmethod
-    def get_dms_lon(self):
-        pass
-
-    @abstractmethod
-    def set_dms_lat(self, lat):
-        pass
-
-    @abstractmethod
-    def get_dms_lat(self):
+    def set_lat(self, lat):
         pass
 
     @abstractmethod
     def __str__(self):
         pass
 
-    @abstractmethod
+    def get_dms_lon(self):
+        return self._dms_lon
+
+    def get_dms_lat(self):
+        return self._dms_lat
+
+    def get_float_lon(self):
+        return self._float_lon
+
+    def get_float_lat(self):
+        return self._float_lat
+
     def __eq__(self, other):
-        pass
+        return (self._float_lat == other.get_float_lat) and (self._dms_lat == other.get_dms_lat) and (
+                self._float_lon == other.get_float_lon) and (self._dms_lon == other.get_dms_lon)
