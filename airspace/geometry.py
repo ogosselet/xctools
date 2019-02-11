@@ -203,9 +203,9 @@ class GisUtil:
 class FloatGisPoint(GisPoint):
     __accuracy = None
 
-    def __init__(self, lat, lon, accuracy=5):
+    def __init__(self, lat, lon, crc, accuracy=5):
         self.__accuracy = accuracy
-        super().__init__(lat, lon)
+        super().__init__(lat, lon, crc)
 
     def set_lon(self, lon):
         self._float_lon = GisUtil.truncate(lon, self.__accuracy)
@@ -221,8 +221,8 @@ class FloatGisPoint(GisPoint):
 
 class DmsGisPoint(GisPoint):
 
-    def __init__(self, lat, lon):
-        super().__init__(lat, lon)
+    def __init__(self, lat, lon, crc):
+        super().__init__(lat, lon, crc)
 
     def set_lon(self, lon):
         self._float_lon = GisUtil.format_decimal_degree(lon)
@@ -257,3 +257,33 @@ class GisDataFactory(object):
         else:
             raise AirspaceGeomUnknown(self, ase_uid)
         return gis_data
+
+
+class Airspace(object):
+    __uuid = None
+    polygon_points = None
+    code_type = None
+    code_id = None
+    text_name = None
+    code_Activity = None
+    code_dist_ver_upper = None
+    val_dist_ver_upper = None
+    uom_dist_ver_upper = None
+    code_dist_ver_lower = None
+    val_dist_ver_lower = None
+    uom_dist_ver_lower = None
+    codeWorkHr = None
+    remark = None
+
+    def __init__(self):
+        super.__init__()
+
+
+class Border(object):
+    __border_points = None
+    __uuid = None
+    __code_type = None
+    __text_name = None
+
+    def __init__(self):
+        super.__init__()

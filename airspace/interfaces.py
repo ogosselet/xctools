@@ -6,9 +6,11 @@ class GisPoint(ABC):
     _float_lon = None
     _dms_lat = None
     _dms_lon = None
+    crc = None
 
-    def __init__(self, lat, lon):
+    def __init__(self, lat, lon, crc):
         super().__init__()
+        self.crc = crc
 
     @abstractmethod
     def set_lon(self, lon):

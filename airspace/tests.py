@@ -75,9 +75,7 @@ class TestAixmParser(unittest.TestCase):
             GisUtil.format_decimal_degree('0901020E')
         )
 
-
     def test_airspace_geometry(self):
-
         aixm_source = AixmSource('./airspace/tests/aixm_4.5_extract.xml')
 
         for airspace_test in AIRSPACE_TESTS:
