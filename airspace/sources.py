@@ -1,7 +1,7 @@
 import lxml
 
 from airspace.geometry import Border, Airspace
-from airspace.util import GisDataFactory
+from airspace.util import GisPointFactory
 
 
 class AixmSource(object):
@@ -57,12 +57,13 @@ class AixmSource(object):
 
         for space in self.__root.findall('Abd'):
             uuid = space.find('AbdUid').get('mid')
-            air_space = self.__air_spaces[uuid]
-            circle = space.findall('Circle')
-            if len(circle) > 0:
-                pass
+            air_space = self.get_air_space(uuid)
+            circle_xml_lement = space.findall('Circle')
+            if len(circle_xml_lement) > 0:
+                air_space.polygon_points = GisPointFactory.build_circle_point_list(circle_xml_lement)
             else:
-                pass
+                xml_points = space.findall('Avx')
+                air_space.polygon_points = GisPointFactory.build_free_geometry_point_list(xml_points)
 
     def parse_borders(self):
         for border in self.__root.findall('Gbr'):
@@ -72,8 +73,9 @@ class AixmSource(object):
             border_object.text_name = uid.find('txtName')
             border_object.code_type = border.find('codeType').text
             for point in border.findall('Gbv'):
-                point_object = GisDataFactory.build_border_point(point.find('geoLat').text, point.find('geoLon').text,
-                                                                 point.find('codeType').text, point.find('valCrc').text)
+                point_object = GisPointFactory.build_border_point(point.find('geoLat').text, point.find('geoLon').text,
+                                                                  point.find('codeType').text,
+                                                                  point.find('valCrc').text)
                 border_object.append_border_point(point_object)
             self.add_border(border_object)
 

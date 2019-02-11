@@ -46,7 +46,7 @@ class DmsGisPoint(GisPoint):
 
 class Airspace(object):
     uuid = None
-    polygon_points = {}
+    polygon_points = []
     code_type = None
     code_id = None
     text_name = None
@@ -59,9 +59,24 @@ class Airspace(object):
     uom_dist_ver_lower = None
     codeWorkHr = None
     remark = None
+    border_crossing = []
 
     def __init__(self):
         super.__init__()
+
+    def get_border_intersections(self, border_uuid):
+        return (x for x in self.border_crossing if x.uuid == border_uuid)
+
+
+class BorderCrossing(object):
+    related_border_uuid = None
+    related_border_name = None
+    common_points = []
+
+    def __init__(self, related_border_uuid, related_border_name):
+        super().__init__()
+        self.related_border_name = related_border_name
+        self.related_border_uuid = related_border_uuid
 
 
 class Border(object):

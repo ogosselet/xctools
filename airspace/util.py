@@ -4,6 +4,7 @@ import re
 
 import pyproj
 from shapely.geometry import Point
+from shapely.ops import transform
 
 from airspace.geometry import FloatGisPoint
 
@@ -197,10 +198,65 @@ class GisUtil:
         # TODO: Raise an exception if we received a format not supported
 
 
-class GisDataFactory(object):
+class CircleHelper(object):
+
+    @staticmethod
+    def get_circle_points(arc_center_gispoint, arc_radius):
+        '''Circle points indexed "lookup" structure
+
+        Args:
+            arc_center ([lat, long]): the The geo coord. (lat/long) of the Circle center
+            arc_radius ([float]): the radius of the Circle
+        '''
+
+        # Cleanup to remove any previous circle "lookup" data from a previous circle
+        logger.debug('Cleaning up the arc lookup structure')
+        arc_lookup = []
+        # Reprojected Circle (v3 because I tried several approach to get a proper circle drawn on a sphere)
+        lat = arc_center_gispoint.get_float_lat()
+        lon = arc_center_gispoint.get_float_lon()
+
+        AEQD = pyproj.Proj(proj='aeqd', lat_0=lat, lon_0=lon, x_0=lon, y_0=lat)
+        WGS84 = pyproj.Proj(init='epsg:4326')
+
+        # transform the given lat-long onto the flat AEQD plane
+        tx_lon, tx_lat = pyproj.transform(WGS84, AEQD, lon, lat)
+        circle = Point(tx_lat, tx_lon).buffer(arc_radius)
+
+        def inverse_tx(x, y, z=None):
+            x, y = pyproj.transform(AEQD, WGS84, x, y)
+            return (x, y)
+
+        # inverse projection from AEQD to EPSG4326-WGS84
+        points = transform(inverse_tx, circle)
+
+        for i, point in enumerate(points):
+            fpoint = FloatGisPoint(point[1], point[0], i, "circle_point")
+            arc_lookup.append(fpoint)
+        return arc_lookup
+
+
+class GisPointFactory(object):
 
     @staticmethod
     def build_border_point(lat, lon, code_type, crc):
         lat = GisUtil.format_decimal_degree(lat)
         lon = GisUtil.format_decimal_degree(lon)
         return FloatGisPoint(lat, lon, crc, code_type)
+
+    @staticmethod
+    def build_circle_point_list(circle_element):
+        # Collect the center & the radius of the Circle
+        center_lat = circle_element.find('geoLatCen').text
+        center_lon = circle_element.find('geoLongCen').text
+        center_crc = circle_element.find('valCrc').text
+        arc_center = FloatGisPoint(center_lat, center_lon, center_crc, "arc_center")
+
+        # Collect the radius
+        arc_radius = GisUtil.format_geo_size(circle_element.find('valRadius').text,
+                                             circle_element.find('uomRadius').text)
+        return CircleHelper.get_circle_points(arc_center, arc_radius)
+
+    @staticmethod
+    def build_free_geometry_point_list(xml_point_list):
+        pass
