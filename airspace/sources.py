@@ -1,6 +1,6 @@
 import lxml
 
-from airspace.geometry import Border, GisDataFactory
+from airspace.geometry import Border, Airspace, GisDataFactory
 
 
 class AixmSource(object):
@@ -32,6 +32,38 @@ class AixmSource(object):
         self.parse_xml()
 
     def parse_xml(self):
+        self.parse_borders()
+        self.parse_air_spaces()
+
+    def parse_air_spaces(self):
+        for admin_data in self.__root.findall('Ase'):
+            air_space = Airspace()
+            uid = admin_data.find('AseUid')
+            air_space.uuid = uid.get('mid')
+            air_space.code_type = uid.find('codeType').text
+            air_space.code_id = uid.find('codeId').text
+            air_space.text_name = admin_data.find('txtName').text
+            air_space.code_Activity = admin_data.find('codeActivity').text
+            air_space.code_dist_ver_upper = admin_data.find('codeDistVerUpper').text
+            air_space.val_dist_ver_upper = admin_data.find('valDistVerUpper').text
+            air_space.uom_dist_ver_upper = admin_data.find('uomDistVerUpper').text
+            air_space.code_dist_ver_lower = admin_data.find('codeDistVerLower').text
+            air_space.val_dist_ver_lower = admin_data.find('valDistVerLower').text
+            air_space.uom_dist_ver_lower = admin_data.find('uomDistVerLower').text
+            air_space.codeWorkHr = admin_data.find('Att').find('codeWorkHr').text
+            air_space.remark = admin_data.find('txtRmk').text
+            self.add_air_space(air_space)
+
+        for space in self.__root.findall('Abd'):
+            uuid = space.find('AbdUid').get('mid')
+            air_space = self.__air_spaces[uuid]
+            circle = space.findall('Circle')
+            if len(circle) > 0:
+                pass
+            else:
+                pass
+
+    def parse_borders(self):
         for border in self.__root.findall('Gbr'):
             border_object = Border
             uid = border.find('GbrUid')
@@ -57,7 +89,7 @@ class AixmSource(object):
         return self.__borders[mid_uuid]
 
     def add_border(self, border_object):
-        self.__borders[border_object.getUuid()] = border_object
+        self.__borders[border_object.uuid] = border_object
 
     def add_air_space(self, air_space_object):
-        self.__air_spaces[air_space_object.getUuid()] = air_space_object
+        self.__air_spaces[air_space_object.uuid] = air_space_object
