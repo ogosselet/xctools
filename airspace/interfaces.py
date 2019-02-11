@@ -9,7 +9,7 @@ class GisPoint(ABC):
     crc = None
     code_type = None
 
-    def __init__(self, lat, lon, crc, code_type):
+    def __init__(self, crc, code_type):
         super().__init__()
         self.crc = crc
         self.code_type = code_type

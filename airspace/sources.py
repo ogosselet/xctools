@@ -1,6 +1,7 @@
 import lxml
 
-from airspace.geometry import Border, Airspace, GisDataFactory
+from airspace.geometry import Border, Airspace
+from airspace.util import GisDataFactory
 
 
 class AixmSource(object):
@@ -27,8 +28,8 @@ class AixmSource(object):
         self.__filename = filename
         self.__tree = lxml.etree.parse(self.__filename)
         self.__root = self.__tree.getroot()
-        self.__borders = {}
-        self.__air_spaces = {}
+        self.__borders = []
+        self.__air_spaces = []
         self.parse_xml()
 
     def parse_xml(self):
@@ -83,13 +84,13 @@ class AixmSource(object):
         return self.__borders
 
     def get_air_space(self, mid_uuid):
-        return self.__air_spaces[mid_uuid]
+        return next(x for x in self.__air_spaces if x.uuid == mid_uuid)
 
     def get_border(self, mid_uuid):
-        return self.__borders[mid_uuid]
+        return next(x for x in self.__borders if x.uuid == mid_uuid)
 
     def add_border(self, border_object):
-        self.__borders[border_object.uuid] = border_object
+        self.__borders.append(border_object)
 
     def add_air_space(self, air_space_object):
-        self.__air_spaces[air_space_object.uuid] = air_space_object
+        self.__air_spaces.append(air_space_object)

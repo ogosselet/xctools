@@ -1,6 +1,7 @@
 from unittest import TestCase
 
-from airspace.geometry import GisUtil, FloatGisPoint
+from airspace.geometry import FloatGisPoint
+from airspace.util import GisUtil
 
 
 class TestGisUtil(TestCase):
