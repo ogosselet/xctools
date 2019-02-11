@@ -203,9 +203,9 @@ class GisUtil:
 class FloatGisPoint(GisPoint):
     __accuracy = None
 
-    def __init__(self, lat, lon, crc, accuracy=5):
+    def __init__(self, lat, lon, crc, code_type, accuracy=5):
         self.__accuracy = accuracy
-        super().__init__(lat, lon, crc)
+        super().__init__(lat, lon, crc, code_type)
 
     def set_lon(self, lon):
         self._float_lon = GisUtil.truncate(lon, self.__accuracy)
@@ -221,8 +221,8 @@ class FloatGisPoint(GisPoint):
 
 class DmsGisPoint(GisPoint):
 
-    def __init__(self, lat, lon, crc):
-        super().__init__(lat, lon, crc)
+    def __init__(self, lat, lon, crc, code_type):
+        super().__init__(lat, lon, crc, code_type)
 
     def set_lon(self, lon):
         self._float_lon = GisUtil.format_decimal_degree(lon)
@@ -237,6 +237,12 @@ class DmsGisPoint(GisPoint):
 
 
 class GisDataFactory(object):
+
+    @staticmethod
+    def build_border_point(lat, lon, code_type, crc):
+        lat = GisUtil.format_decimal_degree(lat)
+        lon = GisUtil.format_decimal_degree(lon)
+        return FloatGisPoint(lat, lon, crc, code_type)
 
     @staticmethod
     def parse_element(self, xml_element, ase_uid):
@@ -260,8 +266,8 @@ class GisDataFactory(object):
 
 
 class Airspace(object):
-    __uuid = None
-    polygon_points = None
+    uuid = None
+    polygon_points = {}
     code_type = None
     code_id = None
     text_name = None
@@ -280,10 +286,16 @@ class Airspace(object):
 
 
 class Border(object):
-    __border_points = None
-    __uuid = None
-    __code_type = None
-    __text_name = None
+    uuid = None
+    code_type = None
+    text_name = None
+    border_points = {}
 
     def __init__(self):
         super.__init__()
+
+    def append_border_point(self, gis_point_object):
+        self.border_points[gis_point_object.crc] = gis_point_object
+
+    def get_border_point(self, crc):
+        return self.border_points[crc]

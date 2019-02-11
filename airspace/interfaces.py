@@ -7,10 +7,12 @@ class GisPoint(ABC):
     _dms_lat = None
     _dms_lon = None
     crc = None
+    code_type = None
 
-    def __init__(self, lat, lon, crc):
+    def __init__(self, lat, lon, crc, code_type):
         super().__init__()
         self.crc = crc
+        self.code_type = code_type
 
     @abstractmethod
     def set_lon(self, lon):
