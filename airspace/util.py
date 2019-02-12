@@ -259,4 +259,17 @@ class GisPointFactory(object):
 
     @staticmethod
     def build_free_geometry_point_list(xml_point_list):
-        pass
+        for xml_point in xml_point_list:
+            code_type= xml_point.find('codeType').text
+            if code_type == 'GRC':
+                pass
+            elif code_type=='RHL':
+                pass
+            elif code_type=='FNT':
+                pass
+            elif code_type=='CCA':
+                pass
+            elif code_type=='CWA':
+                pass
+            elif code_type=='':
+                pass
