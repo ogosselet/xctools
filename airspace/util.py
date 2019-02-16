@@ -236,6 +236,19 @@ class CircleHelper(object):
         return arc_lookup
 
 
+class BorderHelper(object):
+
+    @staticmethod
+    def extract_border_points(border_object, previous_point, current_point):
+        crc_start = self._get_crc_around_border_point(latitude=border_start[0], longitude=border_start[1])
+        crc_stop = self._get_crc_around_border_point(latitude=border_stop[0], longitude=border_stop[1])
+
+        index_start = self._get_border_point_index(crc_start)
+        index_stop = self._get_border_point_index(crc_stop)
+
+        return self._get_border_points(index_start, index_stop)
+
+
 class GisPointFactory(object):
 
     @staticmethod
@@ -258,18 +271,28 @@ class GisPointFactory(object):
         return CircleHelper.get_circle_points(arc_center, arc_radius)
 
     @staticmethod
-    def build_free_geometry_point_list(xml_point_list):
+    def build_free_geometry_point_list(xml_point_list, aixm_source):
+        previous_point = None
+        current_point = None
+        gis_data = []
+
         for xml_point in xml_point_list:
-            code_type= xml_point.find('codeType').text
-            if code_type == 'GRC':
-                pass
-            elif code_type=='RHL':
-                pass
-            elif code_type=='FNT':
-                pass
-            elif code_type=='CCA':
-                pass
-            elif code_type=='CWA':
-                pass
-            elif code_type=='':
-                pass
+            previous_point = current_point
+            code_type = xml_point.find('codeType').text
+            current_point = FloatGisPoint(xml_point.find('geoLat').text, xml_point.find('geoLong').text,
+                                          xml_point.find('valCrc').text, code_type)
+            if previous_point is not None:
+                if code_type == 'GRC' or code_type == 'RHL':
+                    gis_data.append(previous_point)
+                elif code_type == 'FNT':
+                    border_uuid = xml_point.find('GbrUid').get('mid')
+                    gis_data.append(previous_point)
+                    gis_data.extend(
+                        BorderHelper.extract_border_points(aixm_source.get_border(border_uuid), previous_point,
+                                                           current_point))
+                elif code_type == 'CCA':
+                    pass
+                elif code_type == 'CWA':
+                    pass
+                elif code_type == '':
+                    pass

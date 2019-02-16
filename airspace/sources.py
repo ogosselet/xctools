@@ -63,7 +63,7 @@ class AixmSource(object):
                 air_space.polygon_points = GisPointFactory.build_circle_point_list(circle_xml_lement)
             else:
                 xml_points = space.findall('Avx')
-                air_space.polygon_points = GisPointFactory.build_free_geometry_point_list(xml_points)
+                air_space.polygon_points = GisPointFactory.build_free_geometry_point_list(xml_points, self)
 
     def parse_borders(self):
         for border in self.__root.findall('Gbr'):
