@@ -235,6 +235,161 @@ class CircleHelper(object):
             arc_lookup.append(fpoint)
         return arc_lookup
 
+    @staticmethod
+    def extract_arc_points(direction, arc_center, arc_radius, arc_start, arc_stop):
+        '''Extract a subset of Circle points forming a specific Arc of Circle
+
+        TODO: confirm the arc_radius needs to be in meter
+
+        Args:
+            direction ([-1, 1]): Counter clockwise (-1) or clockwise (1) direction to move on circle
+            arc_center ([lat, long]): The geo coord. (lat/long) of the Arc center
+            arc_radius ([float]): The radius of the Arc
+            arc_start ([lat, long]): The geo coord. (lat/long) of the start point of the Arc
+            arc_stop ([lat, long]): The geo coord. (lat/long) of the end point of the Arc
+
+        Returns:
+            [list]: a list of coordinates that can be used to create a "Polygon"
+        '''
+
+        logger.debug('Extracting Arc')
+
+        circle_points = []
+
+        lat = arc_center.get_float_lat()
+        lon = arc_center.get_float_lon()
+
+        AEQD = pyproj.Proj(proj='aeqd', lat_0=lat, lon_0=lon, x_0=lon, y_0=lat)
+        WGS84 = pyproj.Proj(init='epsg:4326')
+
+        # transform the given lat-long onto the flat AEQD plane
+        tx_lon, tx_lat = pyproj.transform(WGS84, AEQD, lon, lat)
+        circle = Point(tx_lat, tx_lon).buffer(arc_radius)
+
+        def inverse_tx(x, y, z=None):
+            x, y = pyproj.transform(AEQD, WGS84, x, y)
+            return (x, y)
+
+        # inverse projection from AEQD to EPSG4326-WGS84
+        projected_circle = transform(inverse_tx, circle)
+
+        projected_circle_points = projected_circle.exterior.coords
+
+        for i, point in enumerate(projected_circle_points):
+            gis_point = FloatGisPoint(point[1], point[0], i, "circle_point")
+            circle_points.append(gis_point)
+
+        # Finding the closest surrounding points around the start/stop points of our Arc on the Circle
+        # idx_ are tupples of point index on the circle
+        idx_start = CircleHelper.get_idx_around_arc_point(arc_start.get_float_lat(), arc_start.get_float_lon(),
+                                                          circle_points)
+        idx_stop = CircleHelper.get_idx_around_arc_point(arc_stop.get_float_lat(), arc_stop.get_float_lon(),
+                                                         circle_points)
+
+        # The actual extraction of the points
+        return CircleHelper.get_arc_points(direction, idx_start, idx_stop, circle_points)
+
+    @staticmethod
+    def get_idx_around_arc_point(latitude, longitude, circle_points):
+        '''Define the index of the 2 circle points that are the closest from a POI (lat, long).
+
+        The POI is on or very close from the circle.
+        We measure the distance between 2 point and our POI as follow using Pythagore
+
+          - sqr(distance) = sqr(delta_lat) + sqr(delta_long)
+
+        We compute a cumulated distance by summing up the 2 sqr(distance)
+
+        The 2 consecutive circle points minimizing this cumulated distance are the interesting
+        point of the circle.
+
+        The main difference with the "Border" equivalent method is that we use in this case
+        an integer value that we add on each and every circle point as "index" lookup value
+        for the extraction
+
+        Args:
+            latitude ([float]): Geo Lat. in decimal degree of the POI we want to locate on the circle
+            longitude ([float]): Geo Long. in decimal degree of the POI we want to locate on the circle
+
+        Returns:
+            [tupple]: the 2 index of the circle points surrounding our POI
+        '''
+
+        logger.debug('Finding position on Arc for Lat:%s / Long:%s', latitude, longitude)
+        # TODO: replace with "max float" or a meaningfull max distance ever possible on earth
+        min_distance = float(1000000000000)
+        idx_left = ''
+        idx_right = ''
+        # TODO: converge more quickly if once prooven to be slow to process
+        for i in range(len(circle_points) - 1):
+            geo_lat_1 = circle_points[i].get_float_lat()
+            geo_long_1 = circle_points[i][1].get_float_lon()
+            geo_lat_2 = circle_points[i + 1].get_float_lat()
+            geo_long_2 = circle_points[i + 1].get_float_lon()
+
+            # Compute the distance
+            distance = (latitude - geo_lat_1) ** 2 + \
+                       (longitude - geo_long_1) ** 2 + \
+                       (geo_lat_2 - latitude) ** 2 + \
+                       (geo_long_2 - longitude) ** 2
+
+            # Looking up the minimum
+            if distance < min_distance:
+                min_distance = distance
+                idx_left = circle_points[i].crc  # crc is the idx in pyproj generated points
+                idx_right = circle_points[i + 1].crc  # crc is the idx in pyproj generated points
+
+        return idx_left, idx_right
+
+    @staticmethod
+    def get_arc_points(direction, idx_start, idx_stop, circle_points):
+
+        '''Get the subset of the Arc point in the good direction
+
+        Args:
+            direction (-1, 1): counter-clockwise=-1, clockwise=1
+            index_start ([tupple]): the index of the 2 points around our first border point
+            index_stop ([type]): the index of the 2 points around our last border point
+        '''
+
+        # Remember that index_ are still tupple for now.
+        # Let's first define the direction in which need to navigate the border
+
+        if direction == 1 and (idx_start[0] < idx_stop[0]):
+            # We can just extract the points
+            start = max(idx_start)
+            stop = min(idx_stop) + 1
+            return circle_points[start:stop]
+
+        if direction == 1 and (idx_start[0] > idx_stop[0]):
+            # We need to pass over 0
+
+            # There is 2 extraction
+            #     from max(idx_start) to the end
+            start = max(idx_start)
+            start_list = circle_points[start:]
+            #     from 0 to min(idx_stop) + 1
+            stop = min(idx_stop) + 1
+            end_list = circle_points[0:stop]
+            logger.debug('Extracting in CW direction from %s to %s', start, stop)
+            return start_list + end_list
+
+        # Counter Clockwise
+        if direction == -1 and (idx_start[0] < idx_stop[0]):
+            # We can just extract the points
+            start = min(idx_start) + 1
+            stop = max(idx_stop)
+            return list(reversed(circle_points[0:start])) + list(reversed(circle_points[stop:]))
+
+        if direction == -1 and (idx_start[0] > idx_stop[0]):
+            # We need to pass over 0
+
+            # There is 2 extraction
+            #     from max(idx_start) to the end
+            start = max(idx_stop)
+            stop = min(idx_start) + 1
+            return list(reversed(circle_points[start:stop]))
+
 
 class BorderHelper(object):
 
@@ -243,8 +398,8 @@ class BorderHelper(object):
         crc_start = BorderHelper._get_crc_around_border_point(previous_point, border_object)
         crc_stop = BorderHelper._get_crc_around_border_point(current_point, border_object)
 
-        index_start = BorderHelper._get_border_point_index(crc_start)
-        index_stop = BorderHelper._get_border_point_index(crc_stop)
+        index_start = BorderHelper.get_border_indexes(border_object, crc_start)
+        index_stop = BorderHelper.get_border_indexes(border_object, crc_stop)
 
         # Remember that index_ are still tupple for now.
         # Let's first define the direction in which need to navigate the border
@@ -263,8 +418,22 @@ class BorderHelper(object):
             return list(reversed(border_object.border_points[stop:start]))
 
     @staticmethod
+    def get_border_indexes(border_object, crc_start):
+        index_start = []
+        for index, border_point in enumerate(border_object.border_points):
+            if border_point[2] == crc_start[0]:
+                index_left = index
+                break
+        for index, border_point in enumerate(border_object.border_points):
+            if border_point[2] == crc_start[1]:
+                index_right = index
+                break
+        index_start.append(index_left)
+        index_start.append(index_right)
+        return index_start
+
+    @staticmethod
     def _get_crc_around_border_point(gis_point_object, border_object):
-        logger.debug('Finding position on border for Lat:%s / Long:%s', latitude, longitude)
         min_distance = float(1000000000000)
         crc_left = ''
         crc_right = ''
@@ -285,29 +454,6 @@ class BorderHelper(object):
                 crc_right = border_object.border_points[i + 1].crc
 
         return crc_left, crc_right
-
-    @staticmethod
-    def _get_border_point_index(val_crc):
-        '''Lookup the index of the border points based on the CRC value of the points
-
-        TODO: There is probably a more pythonic way to perform this lookup in a list
-
-        Args:
-            val_crc ([tupple]): the 2 CRCs of consecutive border points
-
-        Returns:
-            [tuple]: the index value of the border points in our lookup structure
-        '''
-
-        for index, border_point in enumerate(self._border_lookup):
-            if border_point[2] == val_crc[0]:
-                index_left = index
-                break
-        for index, border_point in enumerate(self._border_lookup):
-            if border_point[2] == val_crc[1]:
-                index_right = index
-                break
-        return index_left, index_right
 
 
 class GisPointFactory(object):
@@ -355,10 +501,23 @@ class GisPointFactory(object):
                     crossing.common_points.extend(border_points)
                     border_crossings.append(crossing)
                 elif code_type == 'CCA':
-                    pass
+                    # Collect the center & the radius of the Circle Arc
+
+                    arc_center = FloatGisPoint(xml_point.find('geoLatArc').text, xml_point.find('geoLongArc').text,
+                                               xml_point.find('valCrc').text + "center", "CCA_CENTER")
+
+                    arc_radius = GisUtil.format_geo_size(
+                        value=xml_point.find('valRadiusArc').text,
+                        unit=xml_point.find('uomRadiusArc').text
+                    )
+                    # We pile up the first point
+                    gis_data.append(previous_point)
+
+                    # Counter Clockwise = -1
+                    gis_data.extend(
+                        CircleHelper.extract_arc_points(-1, arc_center, arc_radius, previous_point, current_point))
+
                 elif code_type == 'CWA':
-                    pass
-                elif code_type == '':
                     pass
 
         return gis_data, border_crossings
