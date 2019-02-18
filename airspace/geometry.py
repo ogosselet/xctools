@@ -59,13 +59,13 @@ class Airspace(object):
     uom_dist_ver_lower = None
     codeWorkHr = None
     remark = None
-    border_crossing = []
+    border_crossings = []
 
     def __init__(self):
         super.__init__()
 
     def get_border_intersections(self, border_uuid):
-        return (x for x in self.border_crossing if x.uuid == border_uuid)
+        return (x for x in self.border_crossings if x.uuid == border_uuid)
 
 
 class BorderCrossing(object):

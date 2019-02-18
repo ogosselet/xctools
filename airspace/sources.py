@@ -58,12 +58,13 @@ class AixmSource(object):
         for space in self.__root.findall('Abd'):
             uuid = space.find('AbdUid').get('mid')
             air_space = self.get_air_space(uuid)
-            circle_xml_lement = space.findall('Circle')
-            if len(circle_xml_lement) > 0:
-                air_space.polygon_points = GisPointFactory.build_circle_point_list(circle_xml_lement)
+            circle_xml_element = space.findall('Circle')
+            if len(circle_xml_element) > 0:
+                air_space.polygon_points = GisPointFactory.build_circle_point_list(circle_xml_element)
             else:
                 xml_points = space.findall('Avx')
-                air_space.polygon_points = GisPointFactory.build_free_geometry_point_list(xml_points, self)
+                air_space.polygon_points, air_space.border_crossings = GisPointFactory.build_free_geometry_point_list(
+                    xml_points, self)
 
     def parse_borders(self):
         for border in self.__root.findall('Gbr'):

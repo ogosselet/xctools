@@ -6,7 +6,7 @@ import pyproj
 from shapely.geometry import Point
 from shapely.ops import transform
 
-from airspace.geometry import FloatGisPoint
+from airspace.geometry import FloatGisPoint, BorderCrossing
 
 logger = logging.getLogger(__name__)
 
@@ -240,13 +240,74 @@ class BorderHelper(object):
 
     @staticmethod
     def extract_border_points(border_object, previous_point, current_point):
-        crc_start = self._get_crc_around_border_point(latitude=border_start[0], longitude=border_start[1])
-        crc_stop = self._get_crc_around_border_point(latitude=border_stop[0], longitude=border_stop[1])
+        crc_start = BorderHelper._get_crc_around_border_point(previous_point, border_object)
+        crc_stop = BorderHelper._get_crc_around_border_point(current_point, border_object)
 
-        index_start = self._get_border_point_index(crc_start)
-        index_stop = self._get_border_point_index(crc_stop)
+        index_start = BorderHelper._get_border_point_index(crc_start)
+        index_stop = BorderHelper._get_border_point_index(crc_stop)
 
-        return self._get_border_points(index_start, index_stop)
+        # Remember that index_ are still tupple for now.
+        # Let's first define the direction in which need to navigate the border
+        if index_start[0] < index_stop[0]:
+            forward = True
+            start = max(index_start)
+            stop = min(index_stop) + 1
+        else:
+            forward = False
+            start = min(index_start) + 1
+            stop = max(index_stop)
+
+        if forward:
+            return border_object.border_points[start:stop]
+        else:
+            return list(reversed(border_object.border_points[stop:start]))
+
+    @staticmethod
+    def _get_crc_around_border_point(gis_point_object, border_object):
+        logger.debug('Finding position on border for Lat:%s / Long:%s', latitude, longitude)
+        min_distance = float(1000000000000)
+        crc_left = ''
+        crc_right = ''
+        for i in range(len(border_object.border_points) - 1):
+            geo_lat_1 = border_object.border_points[i].get_float_lat()
+            geo_long_1 = border_object.border_points[i].get_float_lon()
+            geo_lat_2 = border_object.border_points[i + 1].get_float_lat()
+            geo_long_2 = border_object.border_points[i + 1].get_float_lon()
+
+            distance = (gis_point_object.get_float_lat() - geo_lat_1) ** 2 + \
+                       (gis_point_object.get_float_lon() - geo_long_1) ** 2 + \
+                       (geo_lat_2 - gis_point_object.get_float_lat()) ** 2 + \
+                       (geo_long_2 - gis_point_object.get_float_lon()) ** 2
+
+            if distance < min_distance:
+                min_distance = distance
+                crc_left = border_object.border_points[i].crc
+                crc_right = border_object.border_points[i + 1].crc
+
+        return crc_left, crc_right
+
+    @staticmethod
+    def _get_border_point_index(val_crc):
+        '''Lookup the index of the border points based on the CRC value of the points
+
+        TODO: There is probably a more pythonic way to perform this lookup in a list
+
+        Args:
+            val_crc ([tupple]): the 2 CRCs of consecutive border points
+
+        Returns:
+            [tuple]: the index value of the border points in our lookup structure
+        '''
+
+        for index, border_point in enumerate(self._border_lookup):
+            if border_point[2] == val_crc[0]:
+                index_left = index
+                break
+        for index, border_point in enumerate(self._border_lookup):
+            if border_point[2] == val_crc[1]:
+                index_right = index
+                break
+        return index_left, index_right
 
 
 class GisPointFactory(object):
@@ -275,7 +336,7 @@ class GisPointFactory(object):
         previous_point = None
         current_point = None
         gis_data = []
-
+        border_crossings = []
         for xml_point in xml_point_list:
             previous_point = current_point
             code_type = xml_point.find('codeType').text
@@ -287,12 +348,17 @@ class GisPointFactory(object):
                 elif code_type == 'FNT':
                     border_uuid = xml_point.find('GbrUid').get('mid')
                     gis_data.append(previous_point)
-                    gis_data.extend(
-                        BorderHelper.extract_border_points(aixm_source.get_border(border_uuid), previous_point,
-                                                           current_point))
+                    border_obj = aixm_source.get_border(border_uuid)
+                    border_points = BorderHelper.extract_border_points(border_obj, previous_point, current_point)
+                    gis_data.extend(border_points)
+                    crossing = BorderCrossing(border_uuid, border_obj.text_name)
+                    crossing.common_points.extend(border_points)
+                    border_crossings.append(crossing)
                 elif code_type == 'CCA':
                     pass
                 elif code_type == 'CWA':
                     pass
                 elif code_type == '':
                     pass
+
+        return gis_data, border_crossings
