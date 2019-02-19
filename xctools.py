@@ -29,6 +29,7 @@ if args.list_airspaces:
             crossing_list = "(no border crossed)"
         print(air_space.text_name + " => " + str(air_space.uuid) + " " + crossing_list)
 
+print(args.extract_borders)
 if not args.extract_borders == "":
     ais = source.get_air_space(args.extract_borders)
     if ais is not None:
