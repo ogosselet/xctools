@@ -93,7 +93,7 @@ class AixmSource(object):
                 lon = point.find('geoLon')
                 c_type = point.find('codeType')
                 crc = point.find('valCrc')
-                print(etree.tostring(lat))
+                print(etree.tostring(lon))
                 point_object = GisPointFactory.build_border_point(lat.text,
                                                                   lon.text,
                                                                   c_type.text,
