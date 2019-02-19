@@ -40,7 +40,7 @@ if args.extract_borders is not None:
                 print('')
                 pts_txt = ""
                 for pt in crossing.common_points:
-                    pts_txt += "DP " + pt.get_dms_lat() + " " + pt.get_dms_lon() + " "
+                    pts_txt += "DP " + pt.get_oa_lat() + " " + pt.get_oa_lon() + " "
                 print(pts_txt)
                 cpt += 1
         else:

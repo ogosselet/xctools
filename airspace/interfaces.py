@@ -26,6 +26,14 @@ class GisPoint(ABC):
     def __str__(self):
         pass
 
+    def get_oa_lon(self):
+        coord, letter = self._dms_lon.split('.')
+        return coord[0:3] + ":" + coord[3:5] + ":" + coord[5:7] + letter[-1]
+
+    def get_oa_lat(self):
+        coord, letter = self._dms_lat.split('.')
+        return coord[0:2] + ":" + coord[2:4] + ":" + coord[4:6] + letter[-1]
+
     def get_dms_lon(self):
         return self._dms_lon
 
