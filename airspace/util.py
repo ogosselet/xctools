@@ -517,6 +517,20 @@ class GisPointFactory(object):
                         CircleHelper.extract_arc_points(-1, arc_center, arc_radius, previous_point, current_point))
 
                 elif code_type == 'CWA':
-                    pass
+                    # Collect the center & the radius of the Circle Arc
+
+                    arc_center = FloatGisPoint(xml_point.find('geoLatArc').text, xml_point.find('geoLongArc').text,
+                                               xml_point.find('valCrc').text + "center", "CCA_CENTER")
+
+                    arc_radius = GisUtil.format_geo_size(
+                        value=xml_point.find('valRadiusArc').text,
+                        unit=xml_point.find('uomRadiusArc').text
+                    )
+                    # We pile up the first point
+                    gis_data.append(previous_point)
+
+                    # Counter Clockwise = -1
+                    gis_data.extend(
+                        CircleHelper.extract_arc_points(1, arc_center, arc_radius, previous_point, current_point))
 
         return gis_data, border_crossings

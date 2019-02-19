@@ -80,6 +80,13 @@ class AixmSource(object):
                 border_object.append_border_point(point_object)
             self.add_border(border_object)
 
+    def list_air_spaces(self):
+        str_out = ""
+        for air_space in self.__air_spaces:
+            str_out += air_space.text_name + '\n'
+
+        return str_out
+
     def get_air_spaces(self):
         return self.__air_spaces
 
