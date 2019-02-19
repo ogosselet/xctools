@@ -115,10 +115,20 @@ class AixmSource(object):
         return self.__borders
 
     def get_air_space(self, mid_uuid):
-        return next(x for x in self.__air_spaces if x.uuid == mid_uuid)
+        air_space = None
+        try:
+            air_space = next(x for x in self.__air_spaces if x.uuid == mid_uuid)
+        except:
+            pass
+        return air_space
 
     def get_border(self, mid_uuid):
-        return next(x for x in self.__borders if x.uuid == mid_uuid)
+        border = None
+        try:
+            border = next(x for x in self.__borders if x.uuid == mid_uuid)
+        except:
+            pass
+        return border
 
     def add_border(self, border_object):
         self.__borders.append(border_object)
