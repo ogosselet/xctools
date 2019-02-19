@@ -4,7 +4,7 @@ import logging
 import math
 import re
 
-import lxml
+from lxml import etree
 import pyproj
 from shapely.geometry import Point
 from shapely.ops import transform
@@ -41,7 +41,7 @@ class AixmSource(object):
         """
 
         self.__filename = filename
-        self.__tree = lxml.etree.parse(self.__filename)
+        self.__tree = etree.parse(self.__filename)
         self.__root = self.__tree.getroot()
         self.__borders = []
         self.__air_spaces = []
