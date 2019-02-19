@@ -4,8 +4,8 @@ import logging
 import math
 import re
 
-from lxml import etree
 import pyproj
+from lxml import etree
 from shapely.geometry import Point
 from shapely.ops import transform
 
@@ -89,6 +89,7 @@ class AixmSource(object):
             border_object.text_name = uid.find('txtName')
             border_object.code_type = border.find('codeType').text
             for point in border.findall('Gbv'):
+                print(point)
                 point_object = GisPointFactory.build_border_point(point.find('geoLat').text, point.find('geoLon').text,
                                                                   point.find('codeType').text,
                                                                   point.find('valCrc').text)
