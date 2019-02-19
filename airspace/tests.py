@@ -6,7 +6,7 @@ import logging
 import unittest
 
 from airspace.aixm_parser import Airspace, AixmSource
-from airspace.geometry import GisUtil
+from airspace.sources import GisUtil
 
 logger = logging.getLogger(__name__)
 
