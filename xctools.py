@@ -6,7 +6,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("file", help="Aixm source file")
 parser.add_argument("-lb", "--list_borders", help="List borders contained in the source file", action="store_true")
 parser.add_argument("-la", "--list_airspaces", help="List airspaces contained in the source file", action="store_true")
-parser.add_argument("-eb", "--extract_borders", help="Extract borders from given airspace")
+parser.add_argument("-eb", "--extract_borders", help="Extract borders from given airspace", metavar="airspace_uuid")
 args = parser.parse_args()
 
 source = AixmSource(args.file)
