@@ -1,7 +1,22 @@
+"""
+This module contains abstract classes to describe interface
+"""
 from abc import ABC, abstractmethod
 
 
 class GisPoint(ABC):
+    """
+    Interface describing GisPoint, used to draw vectors or polygons
+
+    Attributes:
+        _float_lat  float value representing latitude
+        _float_lon  float value representing longitude
+        _dms_lat    str value representing dms latitude
+        _dms_lon    str value representing dms longitude
+        crc         str representing unique point identifier
+        code_type   str representing type of GisPoint
+
+    """
     _float_lat = None
     _float_lon = None
     _dms_lat = None
@@ -20,14 +35,26 @@ class GisPoint(ABC):
 
     @abstractmethod
     def set_lon(self, lon):
+        """
+        defines longitude for the class implementing the interfaces
+        :param lon: type defined by implementation
+        """
         pass
 
     @abstractmethod
     def set_lat(self, lat):
+        """
+        defines latitude for the class implementing the interfaces
+        :param lat: type defined by implementation
+        """
         pass
 
     @abstractmethod
     def __str__(self):
+        """
+        :return : string representation of the GisPoint
+        :rtype: str
+        """
         pass
 
     def get_oa_lon(self):
