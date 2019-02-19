@@ -90,11 +90,14 @@ class AixmSource(object):
             border_object.code_type = border.find('codeType').text
             for point in border.findall('Gbv'):
                 lat = point.find('geoLat')
+                lon = point.find('geoLon')
+                c_type = point.find('codeType')
+                crc = point.find('valCrc')
                 print(etree.tostring(lat))
-                point_object = GisPointFactory.build_border_point(point.find('geoLat').text(),
-                                                                  point.find('geoLon').text(),
-                                                                  point.find('codeType').text(),
-                                                                  point.find('valCrc').text())
+                point_object = GisPointFactory.build_border_point(lat.text,
+                                                                  lon.text,
+                                                                  c_type.text,
+                                                                  crc.text)
                 border_object.append_border_point(point_object)
             self.add_border(border_object)
 
