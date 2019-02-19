@@ -89,6 +89,7 @@ class AixmSource(object):
             border_object.text_name = uid.find('txtName')
             border_object.code_type = border.find('codeType').text
             for point in border.findall('Gbv'):
+                print(etree.tostring(point))
                 lat = point.find('geoLat')
                 lon = point.find('geoLon')
                 c_type = point.find('codeType')
