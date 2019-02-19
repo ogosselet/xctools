@@ -89,7 +89,8 @@ class AixmSource(object):
             border_object.text_name = uid.find('txtName')
             border_object.code_type = border.find('codeType').text
             for point in border.findall('Gbv'):
-                print(etree.tostring(point))
+                lat = point.find('geoLat')
+                print(etree.tostring(lat))
                 point_object = GisPointFactory.build_border_point(point.find('geoLat').text, point.find('geoLon').text,
                                                                   point.find('codeType').text,
                                                                   point.find('valCrc').text)
