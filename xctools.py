@@ -41,6 +41,7 @@ if args.extract_borders is not None:
                 pts_txt = ""
                 for pt in crossing.common_points:
                     pts_txt += "DP " + pt.get_dms_lat() + " " + pt.get_dms_lon() + " "
+                print(pts_txt)
                 cpt += 1
         else:
             print('airspace uuid : ' + args.extract_borders + " does not cross any border.")
