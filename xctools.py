@@ -18,7 +18,7 @@ if args.list_airspaces:
     for air_space in source.get_air_spaces():
         if len(air_space.border_crossings) > 0:
             crossing_list = "(borders : "
-            for crossing in air_space.border_crossing:
+            for crossing in air_space.border_crossings:
                 if crossing_list == "(borders : ":
                     crossing_list += str(crossing.related_border_uuid)
                 else:
