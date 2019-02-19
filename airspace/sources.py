@@ -750,7 +750,24 @@ class Border(object):
         super().__init__()
 
     def append_border_point(self, gis_point_object):
+        """
+        add a GisPoint to the border vector
+
+        :param airspace.interfaces.GisPoint gis_point_object: border point
+        """
         self.border_points.append(gis_point_object)
 
     def get_border_point(self, crc):
-        return next(x for x in self.border_points if x.crc == crc)
+        """
+        returns a GisPoint belonging to border vector, using its crc
+
+        :param str crc: GisPoint's crc
+        :return: GisPoint
+        :rtype: airspace.interfaces.GisPoint
+        """
+        point = None
+        try:
+            point = next(x for x in self.border_points if x.crc == crc)
+        except:
+            pass
+        return point
