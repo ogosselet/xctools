@@ -721,7 +721,12 @@ class Airspace(object):
         super().__init__()
 
     def get_border_intersections(self, border_uuid):
-        return (x for x in self.border_crossings if x.uuid == border_uuid)
+        crossing = None
+        try:
+            crossing = (x for x in self.border_crossings if x.uuid == border_uuid)
+        except:
+            pass
+        return crossing
 
 
 class BorderCrossing(object):
