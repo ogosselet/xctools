@@ -479,7 +479,6 @@ class GisPointFactory(object):
 
     @staticmethod
     def build_free_geometry_point_list(xml_point_list, aixm_source):
-        previous_point = None
         current_point = None
         gis_data = []
         border_crossings = []
