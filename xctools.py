@@ -6,6 +6,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("file", help="Aixm source file")
 parser.add_argument("-lb", "--list_borders", help="List borders contained in the source file", action="store_true")
 parser.add_argument("-la", "--list_airspaces", help="List airspaces contained in the source file", action="store_true")
+parser.add_argument("-eb", "--extract_borders", help="Extract borders from given airspace")
 args = parser.parse_args()
 
 source = AixmSource(args.file)
@@ -27,3 +28,21 @@ if args.list_airspaces:
         else:
             crossing_list = "(no border crossed)"
         print(air_space.text_name + " => " + str(air_space.uuid) + " " + crossing_list)
+
+if not args.extract_borders == "":
+    ais = source.get_air_space(args.extract_borders)
+    if ais is not None:
+        if len(ais.border_crossings) > 0:
+            cpt = 1
+            for crossing in ais.border_crossings:
+                print('# border crossing ' + str(
+                    cpt) + ' : ' + crossing.related_border_name + '(' + crossing.related_border_uuid + ')')
+                print('')
+                pts_txt = ""
+                for pt in crossing.common_points:
+                    pts_txt += "DP " + pt.get_dms_lat() + " " + pt.get_dms_lon() + " "
+                cpt += 1
+        else:
+            print('airspace uuid : ' + args.extract_borders + " does not cross any border.")
+    else:
+        print('was not able to find airspace uuid : ' + args.extract_borders)
