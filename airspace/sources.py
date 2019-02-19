@@ -83,7 +83,7 @@ class AixmSource(object):
 
     def parse_borders(self):
         for border in self.__root.findall('Gbr'):
-            border_object = Border
+            border_object = Border()
             uid = border.find('GbrUid')
             border_object.uuid = uid.get('mid')
             border_object.text_name = uid.find('txtName')
