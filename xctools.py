@@ -26,4 +26,4 @@ if args.list_airspaces:
             crossing_list += ")"
         else:
             crossing_list = "(no border crossed)"
-        print(air_space.text_name + " => " + str(air_space.uuid)) + " " + crossing_list
+        print(air_space.text_name + " => " + str(air_space.uuid) + " " + crossing_list)
