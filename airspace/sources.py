@@ -729,7 +729,7 @@ class Border(object):
     border_points = []
 
     def __init__(self):
-        super.__init__()
+        super().__init__()
 
     def append_border_point(self, gis_point_object):
         self.border_points.append(gis_point_object)
