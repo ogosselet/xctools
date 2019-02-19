@@ -73,8 +73,8 @@ class AixmSource(object):
         for space in self.__root.findall('Abd'):
             uuid = space.find('AbdUid').get('mid')
             air_space = self.get_air_space(uuid)
-            circle_xml_element = space.findall('Circle')
-            if len(circle_xml_element) > 0:
+            circle_xml_element = space.find('Circle')
+            if circle_xml_element is not None:
                 air_space.polygon_points = GisPointFactory.build_circle_point_list(circle_xml_element)
             else:
                 xml_points = space.findall('Avx')
@@ -86,7 +86,7 @@ class AixmSource(object):
             border_object = Border()
             uid = border.find('GbrUid')
             border_object.uuid = uid.get('mid')
-            border_object.text_name = uid.find('txtName')
+            border_object.text_name = uid.find('txtName').text
             border_object.code_type = border.find('codeType').text
             for point in border.findall('Gbv'):
                 lat = point.find('geoLat')
@@ -340,8 +340,8 @@ class CircleHelper(object):
 
         # inverse projection from AEQD to EPSG4326-WGS84
         points = transform(inverse_tx, circle)
-
-        for i, point in enumerate(points):
+        projected_circle_points = points.exterior.coords
+        for i, point in enumerate(projected_circle_points):
             fpoint = FloatGisPoint(point[1], point[0], i, "circle_point")
             arc_lookup.append(fpoint)
         return arc_lookup
@@ -434,7 +434,7 @@ class CircleHelper(object):
         # TODO: converge more quickly if once prooven to be slow to process
         for i in range(len(circle_points) - 1):
             geo_lat_1 = circle_points[i].get_float_lat()
-            geo_long_1 = circle_points[i][1].get_float_lon()
+            geo_long_1 = circle_points[i].get_float_lon()
             geo_lat_2 = circle_points[i + 1].get_float_lat()
             geo_long_2 = circle_points[i + 1].get_float_lon()
 
@@ -532,11 +532,11 @@ class BorderHelper(object):
     def get_border_indexes(border_object, crc_start):
         index_start = []
         for index, border_point in enumerate(border_object.border_points):
-            if border_point[2] == crc_start[0]:
+            if border_point.crc == crc_start[0]:
                 index_left = index
                 break
         for index, border_point in enumerate(border_object.border_points):
-            if border_point[2] == crc_start[1]:
+            if border_point.crc == crc_start[1]:
                 index_right = index
                 break
         index_start.append(index_left)
@@ -578,8 +578,8 @@ class GisPointFactory(object):
     @staticmethod
     def build_circle_point_list(circle_element):
         # Collect the center & the radius of the Circle
-        center_lat = circle_element.find('geoLatCen').text
-        center_lon = circle_element.find('geoLongCen').text
+        center_lat = GisUtil.format_decimal_degree(circle_element.find('geoLatCen').text)
+        center_lon = GisUtil.format_decimal_degree(circle_element.find('geoLongCen').text)
         center_crc = circle_element.find('valCrc').text
         arc_center = FloatGisPoint(center_lat, center_lon, center_crc, "arc_center")
 
@@ -596,7 +596,8 @@ class GisPointFactory(object):
         for xml_point in xml_point_list:
             previous_point = current_point
             code_type = xml_point.find('codeType').text
-            current_point = FloatGisPoint(xml_point.find('geoLat').text, xml_point.find('geoLong').text,
+            current_point = FloatGisPoint(GisUtil.format_decimal_degree(xml_point.find('geoLat').text),
+                                          GisUtil.format_decimal_degree(xml_point.find('geoLong').text),
                                           xml_point.find('valCrc').text, code_type)
             if previous_point is not None:
                 if code_type == 'GRC' or code_type == 'RHL':
@@ -613,7 +614,8 @@ class GisPointFactory(object):
                 elif code_type == 'CCA':
                     # Collect the center & the radius of the Circle Arc
 
-                    arc_center = FloatGisPoint(xml_point.find('geoLatArc').text, xml_point.find('geoLongArc').text,
+                    arc_center = FloatGisPoint(GisUtil.format_decimal_degree(xml_point.find('geoLatArc').text),
+                                               GisUtil.format_decimal_degree(xml_point.find('geoLongArc').text),
                                                xml_point.find('valCrc').text + "center", "CCA_CENTER")
 
                     arc_radius = GisUtil.format_geo_size(
@@ -630,7 +632,8 @@ class GisPointFactory(object):
                 elif code_type == 'CWA':
                     # Collect the center & the radius of the Circle Arc
 
-                    arc_center = FloatGisPoint(xml_point.find('geoLatArc').text, xml_point.find('geoLongArc').text,
+                    arc_center = FloatGisPoint(GisUtil.format_decimal_degree(xml_point.find('geoLatArc').text),
+                                               GisUtil.format_decimal_degree(xml_point.find('geoLongArc').text),
                                                xml_point.find('valCrc').text + "center", "CCA_CENTER")
 
                     arc_radius = GisUtil.format_geo_size(
