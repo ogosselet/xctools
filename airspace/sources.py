@@ -741,6 +741,16 @@ class BorderCrossing(object):
 
 
 class Border(object):
+    """
+    Class representing Aixm border item
+
+    Attributes:
+        uuid            Unique reference of the border from within the source file.
+                            for generated points, this should be unique as well
+        code_type       The type of point, as described within source file. might be generated as well
+        text_name       display name of the border as mentioned in source file
+        border_points   list of GisPoint representing the border.
+    """
     uuid = None
     code_type = None
     text_name = None

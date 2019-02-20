@@ -63,4 +63,3 @@ for border in source.get_borders():
     for point in border.border_points:
         pts_txt += "DP " + point.get_oa_lat() + " " + point.get_oa_lon() + " "
     print(pts_txt)
-D
