@@ -730,11 +730,25 @@ class Airspace(object):
 
 
 class BorderCrossing(object):
+    """
+    Class representing the intersection of a border in an airspace
+
+    Attributes:
+
+        related_border_uuid     The uuid of the related border
+        related_border_name     The display name of the related border
+        common_points           A list of airspace.interfaces.GisPoint crossing the border
+    """
     related_border_uuid = None
     related_border_name = None
     common_points = []
 
     def __init__(self, related_border_uuid, related_border_name):
+        """
+        Constructor method
+        :param str related_border_uuid: The uuid of the related border
+        :param str related_border_name: The display name of the related border
+        """
         super().__init__()
         self.related_border_name = related_border_name
         self.related_border_uuid = related_border_uuid
@@ -749,7 +763,7 @@ class Border(object):
                             for generated points, this should be unique as well
         code_type       The type of point, as described within source file. might be generated as well
         text_name       display name of the border as mentioned in source file
-        border_points   list of GisPoint representing the border.
+        border_points   list of airspace.interfaces.GisPoint representing the border.
     """
     uuid = None
     code_type = None
@@ -761,7 +775,7 @@ class Border(object):
 
     def append_border_point(self, gis_point_object):
         """
-        add a GisPoint to the border vector
+        Adds a GisPoint to the border vector
 
         :param airspace.interfaces.GisPoint gis_point_object: border point
         """
@@ -769,7 +783,7 @@ class Border(object):
 
     def get_border_point(self, crc):
         """
-        returns a GisPoint belonging to border vector, using its crc
+        Returns a GisPoint belonging to border vector, using its crc
 
         :param str crc: GisPoint's crc
         :return: GisPoint
