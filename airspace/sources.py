@@ -94,10 +94,10 @@ class AixmSource(object):
                 c_type = point.find('codeType')
                 crc = point.find('valCrc')
 
-                point_object = GisPointFactory.build_border_point(lat.text,
-                                                                  lon.text,
-                                                                  c_type.text,
-                                                                  crc.text)
+                point_object = GisPointFactory.build_float_point(lat.text,
+                                                                 lon.text,
+                                                                 c_type.text,
+                                                                 crc.text)
                 border_object.append_border_point(point_object)
             self.add_border(border_object)
 
@@ -578,15 +578,35 @@ class BorderHelper(object):
 
 
 class GisPointFactory(object):
+    """
+    A Factory for building airspace.interfaces.GisPoint
+    """
 
     @staticmethod
-    def build_border_point(lat, lon, code_type, crc):
+    def build_float_point(lat, lon, code_type, crc):
+        """
+        Build a point object from data string
+
+        :param str lat: latitude in DMS as from Aixm Source file
+        :param str lon: latitude in DMS as from Aixm Source file
+        :param str code_type: type of point
+        :param str crc: The unique code of a point
+        :return: An implementation of airspace.interfaces.GisPoint
+        :rtype: airspace.sources.FloatGisPoint
+        """
         lat = GisUtil.format_decimal_degree(lat)
         lon = GisUtil.format_decimal_degree(lon)
         return FloatGisPoint(lat, lon, crc, code_type)
 
     @staticmethod
     def build_circle_point_list(circle_element):
+        """
+        Build a list of airspace.interfaces.GisPoint implementation from the given lxml circle element
+
+        :param lxml.etree.Element circle_element: xml representation of circle element from Aixm source file
+        :return: a list of airspace.interfaces.GisPoint implementation
+        :rtype: list
+        """
         # Collect the center & the radius of the Circle
         center_lat = GisUtil.format_decimal_degree(circle_element.find('geoLatCen').text)
         center_lon = GisUtil.format_decimal_degree(circle_element.find('geoLongCen').text)
@@ -600,6 +620,14 @@ class GisPointFactory(object):
 
     @staticmethod
     def build_free_geometry_point_list(xml_point_list, aixm_source):
+        """
+        Build free geometry airspace polygon.
+
+        :param lxml.etree.Element xml_point_list: a list of xml element representing airspace points geometry
+        :param airspace.sources.AixmSource aixm_source: An instance of airspace.sources.AixmSource
+        :return: a list of airspace.interfaces.GisPoint implementation
+        :rtype: list
+        """
         current_point = None
         gis_data = []
         border_crossings = []
