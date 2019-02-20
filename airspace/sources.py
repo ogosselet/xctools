@@ -682,21 +682,44 @@ class FloatGisPoint(GisPoint):
 
 
 class DmsGisPoint(GisPoint):
+    """
+    An implementation of airspace.interfaces.GisPoint accepting DMS values in constructor
+    """
 
     def __init__(self, lat, lon, crc, code_type):
+        """
+
+        :param str lat: DMS latitude of the airspace.interfaces.GisPoint
+        :param str lon: DMS longitude of the airspace.interfaces.GisPoint
+        :param str crc: unique code for the point. might have generated
+        :param str code_type: type of point
+        """
         super().__init__(crc, code_type)
         self.set_lat(lat)
         self.set_lon(lon)
 
     def set_lon(self, lon):
+        """
+        Sets the longitude for the implemented point
+        :param  str lon: DMS longitude of the airspace.interfaces.GisPoint
+        """
         self._float_lon = GisUtil.format_decimal_degree(lon)
         self._dms_lon = GisUtil.dd2dms(self._float_lon, True)
 
     def set_lat(self, lat):
+        """
+        Sets the latitude for the implemented point
+        :param  str lon: DMS latitude of the airspace.interfaces.GisPoint
+        """
         self._float_lat = GisUtil.format_decimal_degree(lat)
         self._dms_lat = GisUtil.dd2dms(self._float_lat, False)
 
     def __str__(self):
+        """
+
+        :rtype: str
+        :return: a string representation of the point
+        """
         return '[' + str(self._dms_lon) + ', ' + str(self._dms_lat) + ']'
 
 
