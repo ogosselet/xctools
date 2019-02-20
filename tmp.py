@@ -46,7 +46,7 @@ else:
 
 ais = source.get_air_space('100760256')
 if ais is not None:
-    crossing = ais.get_border_intersections('19048558')
+    crossing = ais.get_border_intersection('19048558')
     if crossing is not None:
         pts_txt = ""
         for point in crossing.common_points:

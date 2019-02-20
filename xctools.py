@@ -70,7 +70,7 @@ elif args.dump_source:
 elif args.extract_border is not None:
     ais = source.get_air_space(args.extract_border[0])
     if ais is not None:
-        crossing = ais.get_border_intersections(args.extract_border[1])
+        crossing = ais.get_border_intersection(args.extract_border[1])
         if crossing is not None:
             pts_txt = ""
             for point in crossing.common_points:

@@ -701,6 +701,26 @@ class DmsGisPoint(GisPoint):
 
 
 class Airspace(object):
+    """
+    A class representation of an airspace.
+
+    Attributes:
+        uuid                The unique identifier of the airspace
+        polygon_points      A list of airspace.interfaces.GisPoint representing airspace geometry
+        code_type           The type of airspace
+        code_id             The numerical code identifier of the airspace
+        text_name           The display name of the airspace
+        code_Activity       The activity code of the airspace
+        code_dist_ver_upper The upper vertical distance  code
+        val_dist_ver_upper  The value of the upper vertical distance
+        uom_dist_ver_upper  The uom of the upper vertical distance
+        code_dist_ver_lower The lower vertical distance code
+        val_dist_ver_lower  The value of the lower vertical distance
+        uom_dist_ver_lower  The uom of the upper vertical distance
+        codeWorkHr          Code for the working hours (when airspace is activated)
+        remark              Remarks
+        border_crossings    A list of airspace.source.BorderCrossing instances
+    """
     uuid = None
     polygon_points = []
     code_type = None
@@ -720,7 +740,14 @@ class Airspace(object):
     def __init__(self):
         super().__init__()
 
-    def get_border_intersections(self, border_uuid):
+    def get_border_intersection(self, border_uuid):
+        """
+        Returns an airspace.sources.BorderCrossing object that matches border_uuid. Otherwise, returns None.
+
+        :param str border_uuid: The uuid of the related border
+        :return: The requested airspace.sources.BorderCrossing object
+        :rtype: airspace.sources.BorderCrossing or None
+        """
         crossing = None
         try:
             crossing = (x for x in self.border_crossings if x.uuid == border_uuid)
