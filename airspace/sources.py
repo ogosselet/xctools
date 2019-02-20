@@ -661,23 +661,51 @@ class GisPointFactory(object):
 
 
 class FloatGisPoint(GisPoint):
+    """
+   An implementation of airspace.interfaces.GisPoint accepting Float values in constructor
+
+   Attributes:
+       __accuracy   The maximum amount of decimal for GPS precision (5 = 1.1m)
+   """
     __accuracy = None
 
     def __init__(self, lat, lon, crc, code_type, accuracy=5):
+        """
+
+        :param float lat: Decimal latitude of the airspace.interfaces.GisPoint
+        :param float lon: Decimal longitude of the airspace.interfaces.GisPoint
+        :param float crc: unique code for the point. might have generated
+        :param float code_type: type of point
+        :param accuracy: The maximum amount of decimal for GPS precision (default : 5 = 1.1m)
+        """
         super().__init__(crc, code_type)
         self.__accuracy = accuracy
         self.set_lat(lat)
         self.set_lon(lon)
 
     def set_lon(self, lon):
+        """
+        Sets the longitude for the implemented point
+        :param  Float lon: Decimal longitude of the airspace.interfaces.GisPoint
+        """
         self._float_lon = GisUtil.truncate(lon, self.__accuracy)
         self._dms_lon = GisUtil.dd2dms(lon, True)
 
     def set_lat(self, lat):
+        """
+        Sets the latitude for the implemented point
+        :param  Float lat: Decimal latitude of the airspace.interfaces.GisPoint
+        """
         self._float_lat = GisUtil.truncate(lat, self.__accuracy)
         self._dms_lat = GisUtil.dd2dms(lat, False)
 
     def __str__(self):
+        """
+        String representation of the current point
+
+        :rtype: str
+        :return: a string representation of the point
+        """
         return '[' + str(self._float_lon) + ', ' + str(self._float_lat) + ']'
 
 
@@ -716,6 +744,7 @@ class DmsGisPoint(GisPoint):
 
     def __str__(self):
         """
+        String representation of the current point
 
         :rtype: str
         :return: a string representation of the point
