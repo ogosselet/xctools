@@ -13,7 +13,7 @@ group.add_argument("-da", "--dump_airspace", help="Extract airspace geometry in 
                    metavar="AIRSPACE_UUID")
 group.add_argument("-ds", "--dump_source", help="Dump source file in OpenAir format", action="store_true")
 group.add_argument("-db", "--dump_borders", help="Dump all borders in OpenAir format", action="store_true")
-parser.add_argument("file", help="Aixm source file", required=True)
+parser.add_argument("file", help="Aixm source file")
 
 args = parser.parse_args()
 
