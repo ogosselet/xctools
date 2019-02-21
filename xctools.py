@@ -56,7 +56,7 @@ elif args.extract_borders is not None:
     else:
         print('was not able to find airspace uuid : ' + args.extract_borders)
 elif args.dump_airspace is not None:
-    ais = source.get_air_space(args.extract_borders)
+    ais = source.get_air_space(args.dump_airspace)
     if ais is not None:
         pts_txt = ""
         for point in ais.polygon_points:
