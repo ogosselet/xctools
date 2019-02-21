@@ -138,10 +138,20 @@ class AixmSource(object):
 
 
 class GisUtil:
+    """
+    Util class that provides static method for Gis handling
+    """
 
     @staticmethod
-    def truncate(f, n):
-        """Truncates/pads a float f to n decimal places without rounding"""
+    def truncate(f, n) -> float:
+        """
+        Truncates/pads a float f to n decimal places without rounding
+
+        :param float f: The number to be truncated / padded
+        :param int n: the amount of decimal to use for truncation / padding
+        :return: the padded / truncated float
+        :rtype: float
+        """
         s = '{}'.format(f)
         if 'e' in s or 'E' in s:
             return '{0:.{1}f}'.format(f, n)
@@ -320,9 +330,12 @@ class GisUtil:
 
 
 class CircleHelper(object):
+    """
+    Helper class that provides static method for circle drawing
+    """
 
     @staticmethod
-    def get_circle_points(arc_center_gispoint, arc_radius):
+    def get_circle_points(arc_center_gispoint, arc_radius) -> list:
         '''Circle points indexed "lookup" structure
 
         Args:
