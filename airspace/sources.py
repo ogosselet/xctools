@@ -1,3 +1,10 @@
+"""
+Author : Ludovic Reenaers (https://github.com/Djang0)
+Inspired by the work of Olivier Gosselet (https://github.com/ogosselet/xctools)
+
+
+This module classes for Aixml source file parsing
+"""
 from __future__ import absolute_import, division, print_function
 
 import logging

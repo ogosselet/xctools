@@ -1,4 +1,8 @@
 """
+Author : Ludovic Reenaers (https://github.com/Djang0)
+Inspired by the work of Olivier Gosselet (https://github.com/ogosselet/xctools)
+
+
 This module contains abstract classes to describe interface
 """
 from abc import ABC, abstractmethod
