@@ -2,10 +2,11 @@
 '''
 from __future__ import absolute_import, division, print_function
 
-import unittest
 import logging
+import unittest
 
-from .aixm_parser import format_decimal_degree, Airspace, AixmSource, GisPoint
+from airspace.aixm_parser import Airspace, AixmSource
+from airspace.sources import GisUtil
 
 logger = logging.getLogger(__name__)
 
@@ -22,57 +23,57 @@ AIRSPACE_TESTS = [
     }
 ]
 
+
 class TestAixmParser(unittest.TestCase):
 
     def test_format_decimal_degree(self):
 
         self.assertEqual(
             float(-50.1234),
-            format_decimal_degree('050.1234W')
+            GisUtil.format_decimal_degree('050.1234W')
         )
         self.assertEqual(
             float(50.12345),
-            format_decimal_degree('050.12345E')
+            GisUtil.format_decimal_degree('050.12345E')
         )
         self.assertEqual(
             float(50.1234),
-            format_decimal_degree('50.1234N')
+            GisUtil.format_decimal_degree('50.1234N')
         )
         self.assertEqual(
             float(-50.12345),
-            format_decimal_degree('50.12345S')
+            GisUtil.format_decimal_degree('50.12345S')
         )
 
         self.assertEqual(
             float(-50.12345),
-            format_decimal_degree('50.12345S')
+            GisUtil.format_decimal_degree('50.12345S')
         )
 
         self.assertEqual(
             float('50.172286111111106'),
-            format_decimal_degree('501020.23N')
+            GisUtil.format_decimal_degree('501020.23N')
         )
 
         self.assertEqual(
             float('-50.172286111111106'),
-            format_decimal_degree('501020.23S')
+            GisUtil.format_decimal_degree('501020.23S')
         )
 
         self.assertEqual(
             float('-120.17249722222223'),
-            format_decimal_degree('1201020.99W')
+            GisUtil.format_decimal_degree('1201020.99W')
         )
 
         self.assertEqual(
             float('120.17249722222223'),
-            format_decimal_degree('1201020.99E')
+            GisUtil.format_decimal_degree('1201020.99E')
         )
 
         self.assertEqual(
             float('90.17222222222223'),
-            format_decimal_degree('0901020E')
+            GisUtil.format_decimal_degree('0901020E')
         )
-
 
     def test_airspace_geometry(self):
 
@@ -81,16 +82,14 @@ class TestAixmParser(unittest.TestCase):
         for airspace_test in AIRSPACE_TESTS:
             airspace = Airspace(aixm_source, airspace_test['ase_uid'])
             airspace.parse_airspace()
+            self.assertEqual(airspace.gis_data, airspace_test['gis_data'])
 
-            #self.assertEqual(airspace.gis_data, airspace_test['gis_data'])
-            self.assertEqual(1, 1)
     # Demonstrates GisPoint equality after truncating precicion
     def test_gis_points(self):
         a =GisPoint (50.1234567890123,4.1234567890123, 52)
         b = GisPoint(50.1234567890023, 4.1234567890023, 52)
         print (a)
         self.assertEqual(a,b)
-
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
