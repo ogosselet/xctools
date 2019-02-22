@@ -29,7 +29,7 @@ try:
     # Means we only get a NATS object that we can use to retrieve information if the 
     # login_sequence was completed successfully
 
-    #logged_in = nats_test.login("source_username", "source_password")
+    # logged_in = nats_test.login("source_username", "source_password")
     logger.debug("NATS: User logged in")
 
     prefilter = {
@@ -45,8 +45,8 @@ try:
 
     # The source of the data is an "offline" file for dev only.
     # out = nats_test.download_area_briefing(prefilter)
-    file_briefing = open("briefing.html", "r")
-    nats_test.raw_area_briefing = file_briefing.read()
+    file_briefing = open("briefing/source/tests/nats.html", "r")
+    nats_test.raw_area_briefing = file_briefing.read().encode('utf-8')
     file_briefing.close()
 
     nats_test.parse_area_briefing()

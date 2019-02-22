@@ -16,7 +16,9 @@ class TestSource(unittest.TestCase):
 
         source = NATS()
         file_briefing = open("./briefing/source/tests/nats.html", "r")
-        source.raw_area_briefing = file_briefing.read()
+        # LXML doesn't like unicode strings (fix for Python3)
+        #source.raw_area_briefing = file_briefing.read()
+        source.raw_area_briefing = file_briefing.read().encode('utf-8')
         file_briefing.close()
 
         source._parse_area_briefing()
