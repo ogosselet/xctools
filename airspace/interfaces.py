@@ -25,10 +25,11 @@ class GisPoint(ABC):
     _float_lon = None
     _dms_lat = None
     _dms_lon = None
+    _accuracy = None
     crc = None
     code_type = None
 
-    def __init__(self, crc, code_type):
+    def __init__(self, crc, code_type, accuracy):
         """
         :param str crc: unique reference of GisPoint
         :param str code_type: type of GisPoint
@@ -36,6 +37,7 @@ class GisPoint(ABC):
         super().__init__()
         self.crc = crc
         self.code_type = code_type
+        self._accuracy = accuracy
 
     @abstractmethod
     def set_lon(self, lon):
@@ -113,5 +115,9 @@ class GisPoint(ABC):
         :return: True if equals
         :rtype: bool
         """
-        return (self._float_lat == other.get_float_lat) and (self._dms_lat == other.get_dms_lat) and (
-                self._float_lon == other.get_float_lon) and (self._dms_lon == other.get_dms_lon)
+        a = (self.get_float_lat() == other.get_float_lat())
+        b = (self.get_dms_lat() == other.get_dms_lat())
+        c = (self.get_float_lon() == other.get_float_lon())
+        d = (self.get_dms_lon() == other.get_dms_lon())
+        eq = a and b and c and d
+        return eq

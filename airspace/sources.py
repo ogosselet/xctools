@@ -748,9 +748,8 @@ class FloatGisPoint(GisPoint):
    An implementation of airspace.interfaces.GisPoint accepting Float values in constructor
 
    Attributes:
-       __accuracy   The maximum amount of decimal for GPS precision (5 = 1.1m)
+       _accuracy   The maximum amount of decimal for GPS precision (5 = 1.1m)
    """
-    __accuracy = None
 
     def __init__(self, lat, lon, crc, code_type, accuracy=5):
         """
@@ -761,8 +760,7 @@ class FloatGisPoint(GisPoint):
         :param float code_type: type of point
         :param accuracy: The maximum amount of decimal for GPS precision (default : 5 = 1.1m)
         """
-        super().__init__(crc, code_type)
-        self.__accuracy = accuracy
+        super().__init__(crc, code_type, accuracy)
         self.set_lat(lat)
         self.set_lon(lon)
 
@@ -771,7 +769,7 @@ class FloatGisPoint(GisPoint):
         Sets the longitude for the implemented point
         :param  Float lon: Decimal longitude of the airspace.interfaces.GisPoint
         """
-        self._float_lon = GisUtil.truncate(lon, self.__accuracy)
+        self._float_lon = GisUtil.truncate(lon, self._accuracy)
         self._dms_lon = GisUtil.dd2dms(lon, True)
 
     def set_lat(self, lat) -> None:
@@ -779,7 +777,7 @@ class FloatGisPoint(GisPoint):
         Sets the latitude for the implemented point
         :param  Float lat: Decimal latitude of the airspace.interfaces.GisPoint
         """
-        self._float_lat = GisUtil.truncate(lat, self.__accuracy)
+        self._float_lat = GisUtil.truncate(lat, self._accuracy)
         self._dms_lat = GisUtil.dd2dms(lat, False)
 
     def __str__(self) -> str:
@@ -797,7 +795,7 @@ class DmsGisPoint(GisPoint):
     An implementation of airspace.interfaces.GisPoint accepting DMS values in constructor
     """
 
-    def __init__(self, lat, lon, crc, code_type):
+    def __init__(self, lat, lon, crc, code_type, accuracy=5):
         """
 
         :param str lat: DMS latitude of the airspace.interfaces.GisPoint
@@ -805,7 +803,7 @@ class DmsGisPoint(GisPoint):
         :param str crc: unique code for the point. might have generated
         :param str code_type: type of point
         """
-        super().__init__(crc, code_type)
+        super().__init__(crc, code_type, accuracy)
         self.set_lat(lat)
         self.set_lon(lon)
 
@@ -814,16 +812,16 @@ class DmsGisPoint(GisPoint):
         Sets the longitude for the implemented point
         :param  str lon: DMS longitude of the airspace.interfaces.GisPoint
         """
-        self._float_lon = GisUtil.format_decimal_degree(lon)
-        self._dms_lon = GisUtil.dd2dms(self._float_lon, True)
+        self._float_lon = GisUtil.truncate(GisUtil.format_decimal_degree(lon), self._accuracy)
+        self._dms_lon = GisUtil.dd2dms(GisUtil.format_decimal_degree(lon), True)
 
     def set_lat(self, lat) -> None:
         """
         Sets the latitude for the implemented point
         :param  str lon: DMS latitude of the airspace.interfaces.GisPoint
         """
-        self._float_lat = GisUtil.format_decimal_degree(lat)
-        self._dms_lat = GisUtil.dd2dms(self._float_lat, False)
+        self._float_lat = GisUtil.truncate(GisUtil.format_decimal_degree(lat), self._accuracy)
+        self._dms_lat = GisUtil.dd2dms(GisUtil.format_decimal_degree(lat), False)
 
     def __str__(self) -> str:
         """
