@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function
 import logging
 import math
 import re
+import simplekml
 
 import pyproj
 from lxml import etree
@@ -24,6 +25,142 @@ geod = pyproj.Geod(ellps='WGS84')
 
 FREE_GEOM = 1
 CIRCLE_GEOM = 2
+
+class BorderCrossing(object):
+    """
+    Class representing the intersection of a border in an airspace
+
+    Attributes:
+
+        related_border_uuid     The uuid of the related border
+        related_border_name     The display name of the related border
+        common_points           A list of airspace.interfaces.GisPoint crossing the border
+    """
+    related_border_uuid = None
+    related_border_name = None
+    common_points = []
+
+    def __init__(self, related_border_uuid, related_border_name):
+        """
+        Constructor method
+        :param str related_border_uuid: The uuid of the related border
+        :param str related_border_name: The display name of the related border
+        """
+        super().__init__()
+        self.related_border_name = related_border_name
+        self.related_border_uuid = related_border_uuid
+
+class Border(object):
+    """
+    Class representing Aixm border item
+
+    Attributes:
+        uuid            Unique reference of the border from within the source file.
+                            for generated points, this should be unique as well
+        code_type       The type of point, as described within source file. might be generated as well
+        text_name       display name of the border as mentioned in source file
+        border_points   list of airspace.interfaces.GisPoint representing the border.
+    """
+    uuid = None
+    code_type = None
+    text_name = None
+    border_points = []
+
+    def __init__(self):
+        super().__init__()
+
+    def append_border_point(self, gis_point_object) -> None:
+        """
+        Adds a GisPoint to the border vector
+
+        :param airspace.interfaces.GisPoint gis_point_object: border point
+        """
+        self.border_points.append(gis_point_object)
+
+    def get_border_point(self, crc) -> GisPoint:
+        """
+        Returns a GisPoint belonging to border vector, using its crc
+
+        :param str crc: GisPoint's crc
+        :return: GisPoint
+        :rtype: airspace.interfaces.GisPoint
+        """
+        point = None
+        try:
+            point = next(x for x in self.border_points if x.crc == crc)
+        except:
+            pass
+        return point
+
+class Airspace(object):
+    """
+    A class representation of an airspace.
+
+    Attributes:
+        uuid                The unique identifier of the airspace
+        polygon_points      A list of airspace.interfaces.GisPoint representing airspace geometry
+        code_type           The type of airspace
+        code_id             The numerical code identifier of the airspace
+        text_name           The display name of the airspace
+        code_Activity       The activity code of the airspace
+        code_dist_ver_upper The upper vertical distance  code
+        val_dist_ver_upper  The value of the upper vertical distance
+        uom_dist_ver_upper  The uom of the upper vertical distance
+        code_dist_ver_lower The lower vertical distance code
+        val_dist_ver_lower  The value of the lower vertical distance
+        uom_dist_ver_lower  The uom of the upper vertical distance
+        codeWorkHr          Code for the working hours (when airspace is activated)
+        remark              Remarks
+        border_crossings    A list of airspace.source.BorderCrossing instances
+    """
+    uuid = None
+    polygon_points = []
+    code_type = None
+    code_id = None
+    text_name = None
+    code_Activity = None
+    code_dist_ver_upper = None
+    val_dist_ver_upper = None
+    uom_dist_ver_upper = None
+    code_dist_ver_lower = None
+    val_dist_ver_lower = None
+    uom_dist_ver_lower = None
+    codeWorkHr = None
+    remark = None
+    border_crossings = []
+
+    def __init__(self):
+        super().__init__()
+
+    def get_border_intersection(self, border_uuid) -> BorderCrossing:
+        """
+        Returns an airspace.sources.BorderCrossing object that matches border_uuid. Otherwise, returns None.
+
+        :param str border_uuid: The uuid of the related border
+        :return: The requested airspace.sources.BorderCrossing object
+        :rtype: airspace.sources.BorderCrossing or None
+        """
+        crossing = None
+        try:
+            crossing = next(x for x in self.border_crossings if x.uuid == border_uuid)
+        except:
+            pass
+        return crossing
+
+    def to_kml(self, target_directory: str) -> None:
+        # TODO : implement some color factory in order to avoid having the same color for every airspace
+        kml = simplekml.Kml()
+        pol = kml.newpolygon(name=self.text_name)
+        pol.style.linestyle.color = simplekml.Color.red
+        pol.style.linestyle.width = 1
+        pol.style.polystyle.color = simplekml.Color.changealphaint(100, simplekml.Color.red)
+        outerboundaryis = []
+        for point in self.polygon_points:
+            outerboundaryis.append((point.get_float_lat(), point.get_float_lon()))
+        # Close the polygon
+        outerboundaryis.append((self.polygon_points[0][1], self.polygon_points[0][0]))
+        pol.outerboundaryis = outerboundaryis
+        kml.save(target_directory + '{}.kml'.format(self.text_name))
 
 
 class AixmSource(object):
@@ -121,7 +258,7 @@ class AixmSource(object):
     def get_borders(self):
         return self.__borders
 
-    def get_air_space(self, mid_uuid):
+    def get_air_space(self, mid_uuid:str)->Airspace:
         """
 
         Args:
@@ -833,125 +970,4 @@ class DmsGisPoint(GisPoint):
         return '[' + str(self._dms_lon) + ', ' + str(self._dms_lat) + ']'
 
 
-class BorderCrossing(object):
-    """
-    Class representing the intersection of a border in an airspace
 
-    Attributes:
-
-        related_border_uuid     The uuid of the related border
-        related_border_name     The display name of the related border
-        common_points           A list of airspace.interfaces.GisPoint crossing the border
-    """
-    related_border_uuid = None
-    related_border_name = None
-    common_points = []
-
-    def __init__(self, related_border_uuid, related_border_name):
-        """
-        Constructor method
-        :param str related_border_uuid: The uuid of the related border
-        :param str related_border_name: The display name of the related border
-        """
-        super().__init__()
-        self.related_border_name = related_border_name
-        self.related_border_uuid = related_border_uuid
-
-
-class Airspace(object):
-    """
-    A class representation of an airspace.
-
-    Attributes:
-        uuid                The unique identifier of the airspace
-        polygon_points      A list of airspace.interfaces.GisPoint representing airspace geometry
-        code_type           The type of airspace
-        code_id             The numerical code identifier of the airspace
-        text_name           The display name of the airspace
-        code_Activity       The activity code of the airspace
-        code_dist_ver_upper The upper vertical distance  code
-        val_dist_ver_upper  The value of the upper vertical distance
-        uom_dist_ver_upper  The uom of the upper vertical distance
-        code_dist_ver_lower The lower vertical distance code
-        val_dist_ver_lower  The value of the lower vertical distance
-        uom_dist_ver_lower  The uom of the upper vertical distance
-        codeWorkHr          Code for the working hours (when airspace is activated)
-        remark              Remarks
-        border_crossings    A list of airspace.source.BorderCrossing instances
-    """
-    uuid = None
-    polygon_points = []
-    code_type = None
-    code_id = None
-    text_name = None
-    code_Activity = None
-    code_dist_ver_upper = None
-    val_dist_ver_upper = None
-    uom_dist_ver_upper = None
-    code_dist_ver_lower = None
-    val_dist_ver_lower = None
-    uom_dist_ver_lower = None
-    codeWorkHr = None
-    remark = None
-    border_crossings = []
-
-    def __init__(self):
-        super().__init__()
-
-    def get_border_intersection(self, border_uuid) -> BorderCrossing:
-        """
-        Returns an airspace.sources.BorderCrossing object that matches border_uuid. Otherwise, returns None.
-
-        :param str border_uuid: The uuid of the related border
-        :return: The requested airspace.sources.BorderCrossing object
-        :rtype: airspace.sources.BorderCrossing or None
-        """
-        crossing = None
-        try:
-            crossing = next(x for x in self.border_crossings if x.uuid == border_uuid)
-        except:
-            pass
-        return crossing
-
-
-class Border(object):
-    """
-    Class representing Aixm border item
-
-    Attributes:
-        uuid            Unique reference of the border from within the source file.
-                            for generated points, this should be unique as well
-        code_type       The type of point, as described within source file. might be generated as well
-        text_name       display name of the border as mentioned in source file
-        border_points   list of airspace.interfaces.GisPoint representing the border.
-    """
-    uuid = None
-    code_type = None
-    text_name = None
-    border_points = []
-
-    def __init__(self):
-        super().__init__()
-
-    def append_border_point(self, gis_point_object) -> None:
-        """
-        Adds a GisPoint to the border vector
-
-        :param airspace.interfaces.GisPoint gis_point_object: border point
-        """
-        self.border_points.append(gis_point_object)
-
-    def get_border_point(self, crc) -> GisPoint:
-        """
-        Returns a GisPoint belonging to border vector, using its crc
-
-        :param str crc: GisPoint's crc
-        :return: GisPoint
-        :rtype: airspace.interfaces.GisPoint
-        """
-        point = None
-        try:
-            point = next(x for x in self.border_points if x.crc == crc)
-        except:
-            pass
-        return point
