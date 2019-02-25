@@ -34,5 +34,11 @@ Schedule Parser Module
 Airspace Module
 ---------------
 
-.. automodule:: airspace.aixm_parser
+.. automodule:: airspace.exceptions
+    :members:
+
+.. automodule:: airspace.interfaces
+    :members:
+
+.. automodule:: airspace.sources
     :members:
