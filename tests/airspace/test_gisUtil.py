@@ -11,6 +11,6 @@ class TestGisUtil(TestCase):
         self.assertEqual(GisUtil.dd2dms(dd, False), aixm_dms_formatted_str)
 
     def test_float_gis_points(self):
-        a = FloatGisPoint(50.1234567890123, 4.1234567890123)
-        b = FloatGisPoint(50.1234567890023, 4.1234567890023)
+        a = FloatGisPoint(50.1234567890123, 4.1234567890123, "123456", "test")
+        b = FloatGisPoint(50.1234567890023, 4.1234567890023, "1234568", "test")
         self.assertEqual(a, b)
