@@ -872,7 +872,7 @@ if __name__ == '__main__':
     # airspace = Airspace(aixm_source, str(101002747038897))
 
     # A Circle Geometry
-    # TODO : move this to airspace.sources.Airspace
+
     name = 'EBR28'
     airspace = Airspace(aixm_source, str(400001601922575))
 

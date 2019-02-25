@@ -7,7 +7,6 @@ Raises:
 from __future__ import absolute_import, division, print_function
 
 import datetime
-import calendar
 import logging
 
 import ply.lex as lex
@@ -774,6 +773,7 @@ class ScheduleParser():
         self.tokens = self.lexer.tokens
 
         #self.parser = yacc.yacc(module=self, write_tables=0, debug=True)
+
         self.parser = yacc.yacc(module=self, write_tables=0, errorlog=yacc.NullLogger())
         logger.debug('ScheduleParser: LEX/YAC ready')
 
