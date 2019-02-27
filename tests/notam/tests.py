@@ -8,8 +8,8 @@ import datetime
 import logging
 import ast
 
-from .sched_parser import ScheduleParser
-from .notam import Notam
+from notam.sched_parser import ScheduleParser
+from notam.notam import Notam
 
 logger = logging.getLogger(__name__)
 
