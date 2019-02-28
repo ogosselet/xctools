@@ -44,23 +44,8 @@ elif args.list_airspaces:
     print(AirspaceHelper.list_airspaces(source))
 
 elif args.extract_borders is not None:
-    ais = source.get_air_space(args.extract_borders)
-    if ais is not None:
-        if len(ais.border_crossings) > 0:
-            cpt = 1
-            for crossing in ais.border_crossings:
-                print('# border crossing ' + str(
-                    cpt) + ' : ' + crossing.related_border_name + '(' + crossing.related_border_uuid + ')')
-                print('')
-                pts_txt = ""
-                for pt in crossing.common_points:
-                    pts_txt += "DP " + pt.get_oa_lat() + " " + pt.get_oa_lon() + " "
-                print(pts_txt)
-                cpt += 1
-        else:
-            print('airspace uuid : ' + args.extract_borders + " does not cross any border.")
-    else:
-        print('was not able to find airspace uuid : ' + args.extract_borders)
+    print(AirspaceHelper.extract_borders(args.extract_borders, source))
+
 elif args.dump_airspace is not None:
     ais = source.get_air_space(args.dump_airspace)
     if ais is not None:
