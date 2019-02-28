@@ -38,14 +38,13 @@ class AirspaceHelper:
                         cpt) + ' : ' + crossing.related_border_name + '(' + crossing.related_border_uuid + ')\n'
                     output += '\n'
                     pts_txt = ""
-                    print(str(len(crossing.common_points)))
                     for pt in crossing.common_points:
                         pts_txt += "DP " + pt.get_oa_lat() + " " + pt.get_oa_lon() + " "
                     output += pts_txt
                     cpt += 1
             else:
-                output = 'airspace uuid : ' + args.extract_borders + " does not cross any border."
+                output = 'airspace uuid : ' + airspace_uuid + " does not cross any border."
         else:
-            output = 'was not able to find airspace uuid : ' + args.extract_borders
+            output = 'was not able to find airspace uuid : ' + airspace_uuid
 
         return output
