@@ -3,7 +3,7 @@ python:
   - "3.6"
 script:
   - python -m tests.notam.tests
-  - python -m tests.briefing. tests
+  - python -m tests.briefing.tests
   - python -m tests.airspace.tests
   - python -m tests.airspace.test_gisUtil
 
