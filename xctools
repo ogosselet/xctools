@@ -1,0 +1,2 @@
+#/bin/sh
+/usr/bin/python3.6 /code/xctools/xctools.py
