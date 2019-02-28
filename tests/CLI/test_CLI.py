@@ -16,3 +16,19 @@ class TestCLI(TestCase):
         for border in self.source.get_borders():
             payload += border.text_name + '\t' + str(border.uuid) + '\n'
         self.assertEqual(payload, challenge)
+
+    def tes_list_airspaces(self):
+        challenge = 'ARDENNES 05\t100760256\t19048558\nLESSIVE\t400001601922575\tno border crossed\n'
+        payload = ""
+        for air_space in source.get_air_spaces():
+            if len(air_space.border_crossings) > 0:
+                crossing_list = ""
+                for crossing in air_space.border_crossings:
+                    if crossing_list == "":
+                        crossing_list += str(crossing.related_border_uuid)
+                    else:
+                        crossing_list += ", " + str(crossing.related_border_uuid)
+            else:
+                crossing_list = "no border crossed"
+            payload += air_space.text_name + '\t' + str(air_space.uuid) + '\t' + crossing_list + '\n'
+        self.assertEqual(payload, challenge)

@@ -10,7 +10,8 @@ import argparse
 import json
 import os
 
-# test
+from prettytable import PrettyTable
+
 from airspace.sources import AixmSource
 
 parser = argparse.ArgumentParser(description="Aixm Airspace File CLI parser")
@@ -36,22 +37,25 @@ args = parser.parse_args()
 source = AixmSource(args.file)
 
 if args.list_borders:
+    table = PrettyTable(['Border Name', 'Border UUID'])
     for border in source.get_borders():
-        print(border.text_name + '\t' + str(border.uuid))
+        table.add_row([border.text_name, str(border.uuid)])
+    print(table)
 
 elif args.list_airspaces:
+    table = PrettyTable(['Airspace Name', 'Airspace UUID', 'Border crossed'])
     for air_space in source.get_air_spaces():
         if len(air_space.border_crossings) > 0:
-            crossing_list = "(borders : "
+            crossing_list = ""
             for crossing in air_space.border_crossings:
-                if crossing_list == "(borders : ":
+                if crossing_list == "":
                     crossing_list += str(crossing.related_border_uuid)
                 else:
                     crossing_list += ", " + str(crossing.related_border_uuid)
-            crossing_list += ")"
         else:
-            crossing_list = "(no border crossed)"
-        print(air_space.text_name + " => " + str(air_space.uuid) + " " + crossing_list)
+            crossing_list = "no border crossed"
+        table.add_row([air_space.text_name, str(air_space.uuid), crossing_list])
+    print(table)
 
 elif args.extract_borders is not None:
     ais = source.get_air_space(args.extract_borders)
@@ -122,7 +126,7 @@ elif args.airspaces_to_kml is not None:
         for ais in source.get_air_spaces():
             ais.to_kml(target_dir)
     else:
-        print(target_dir+' is not a valid directory.')
+        print(target_dir + ' is not a valid directory.')
 elif args.dump_source_json:
     print(json.dumps(source.to_dict()))
 
