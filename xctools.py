@@ -10,8 +10,7 @@ import argparse
 import json
 import os
 
-from prettytable import PrettyTable
-
+from CLI.helpers import AirspaceHelper
 from airspace.sources import AixmSource
 
 parser = argparse.ArgumentParser(description="Aixm Airspace File CLI parser")
@@ -37,25 +36,12 @@ args = parser.parse_args()
 source = AixmSource(args.file)
 
 if args.list_borders:
-    table = PrettyTable(['Border Name', 'Border UUID'])
-    for border in source.get_borders():
-        table.add_row([border.text_name, str(border.uuid)])
-    print(table)
+
+    print(AirspaceHelper.list_borders(source))
 
 elif args.list_airspaces:
-    table = PrettyTable(['Airspace Name', 'Airspace UUID', 'Border crossed'])
-    for air_space in source.get_air_spaces():
-        if len(air_space.border_crossings) > 0:
-            crossing_list = ""
-            for crossing in air_space.border_crossings:
-                if crossing_list == "":
-                    crossing_list += str(crossing.related_border_uuid)
-                else:
-                    crossing_list += ", " + str(crossing.related_border_uuid)
-        else:
-            crossing_list = "no border crossed"
-        table.add_row([air_space.text_name, str(air_space.uuid), crossing_list])
-    print(table)
+
+    print(AirspaceHelper.list_airspaces(source))
 
 elif args.extract_borders is not None:
     ais = source.get_air_space(args.extract_borders)

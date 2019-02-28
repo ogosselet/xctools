@@ -32,3 +32,22 @@ class TestCLI(TestCase):
                 crossing_list = "no border crossed"
             payload += air_space.text_name + '\t' + str(air_space.uuid) + '\t' + crossing_list + '\n'
         self.assertEqual(payload, challenge)
+
+    def test_extract_borders(self):
+        ais = self.source.get_air_space(args.extract_borders)
+        if ais is not None:
+            if len(ais.border_crossings) > 0:
+                cpt = 1
+                for crossing in ais.border_crossings:
+                    print('# border crossing ' + str(
+                        cpt) + ' : ' + crossing.related_border_name + '(' + crossing.related_border_uuid + ')')
+                    print('')
+                    pts_txt = ""
+                    for pt in crossing.common_points:
+                        pts_txt += "DP " + pt.get_oa_lat() + " " + pt.get_oa_lon() + " "
+                    print(pts_txt)
+                    cpt += 1
+            else:
+                print('airspace uuid : ' + args.extract_borders + " does not cross any border.")
+        else:
+            print('was not able to find airspace uuid : ' + args.extract_borders)
