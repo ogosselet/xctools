@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Author : Ludovic Reenaers (https://github.com/Djang0)
 Inspired by the work of Olivier Gosselet (https://github.com/ogosselet/xctools)
