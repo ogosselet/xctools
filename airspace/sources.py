@@ -240,6 +240,7 @@ class AixmSource(Sourceable):
         self.__root = self.__tree.getroot()
         self._borders = []
         self._air_spaces = []
+        super().__init__()
 
     def _parse_air_spaces(self) -> None:
         for admin_data in self.__root.findall('Ase'):

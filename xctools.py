@@ -37,7 +37,7 @@ source = AixmSource(args.file)
 
 if args.list_borders:
     for border in source.get_borders():
-        print(border.text_name + " => " + str(border.uuid))
+        print(border.text_name + '\t' + str(border.uuid))
 
 elif args.list_airspaces:
     for air_space in source.get_air_spaces():

@@ -2,7 +2,7 @@ from airspace.sources import AixmSource
 
 source = AixmSource("./airspace/tests/aixm_4.5_extract.xml")
 for border in source.get_borders():
-    print(border.text_name + " => " + str(border.uuid))
+    print(border.text_name + '\t' + str(border.uuid))
 
 for air_space in source.get_air_spaces():
     if len(air_space.border_crossings) > 0:
