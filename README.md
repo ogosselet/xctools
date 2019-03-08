@@ -29,11 +29,9 @@ XCTools are used in the backend of our website [FlyXC.Tools](http://www.flyxc.to
 
 ## Pulling down the container from Docker-hub
 
-[![asciicast](https://asciinema.org/a/232455.svg)](https://asciinema.org/a/232455)
-
+<a href="https://asciinema.org/a/232455" target="_blank"><img src="https://asciinema.org/a/232455.svg" /></a>
 
 ## Running the Docker container
 
+<a href="https://asciinema.org/a/232458" target="_blank"><img src="https://asciinema.org/a/232458.svg" /></a>
 
-
-<script id="asciicast-232455" src="https://asciinema.org/a/232455.js" async></script>
