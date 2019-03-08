@@ -22,3 +22,15 @@ XCTools are used in the backend of our website [FlyXC.Tools](http://www.flyxc.to
 > interrest. 
 > I develop XCTools during my daily commute in the train.
 > I am open for comments & contributions to improve the features and the quality of the project.
+
+---
+
+# Getting started
+
+## Pulling down the container from Docker-hub
+
+[![asciicast](https://asciinema.org/a/232455.svg)](https://asciinema.org/a/232455)
+
+## Running the Docker container
+
+[![asciicast](https://asciinema.org/a/232458.svg)](https://asciinema.org/a/232458)
