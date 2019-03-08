@@ -12,11 +12,12 @@ import math
 import re
 
 import pyproj
+import simplekml
 from lxml import etree
 from shapely.geometry import Point
 from shapely.ops import transform
 
-from airspace.interfaces import GisPoint
+from airspace.interfaces import GisPoint, Sourceable
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,196 @@ FREE_GEOM = 1
 CIRCLE_GEOM = 2
 
 
-class AixmSource(object):
+class BorderCrossing(object):
+    """
+    Class representing the intersection of a border in an airspace
+
+    Attributes:
+
+        related_border_uuid     The uuid of the related border
+        related_border_name     The display name of the related border
+        common_points           A list of airspace.interfaces.GisPoint crossing the border
+    """
+    related_border_uuid = None
+    related_border_name = None
+    common_points = []
+
+    def __init__(self, related_border_uuid, related_border_name):
+        """
+        Constructor method
+        :param str related_border_uuid: The uuid of the related border
+        :param str related_border_name: The display name of the related border
+        """
+        super().__init__()
+        self.related_border_name = related_border_name
+        self.related_border_uuid = related_border_uuid
+
+    def to_dict(self) -> dict:
+        point_list = []
+        for point in self.common_points:
+            point_list.append(point.to_dict())
+        crossing_dict = {
+            "related_border_uuid": self.related_border_uuid,
+            "related_border_name": self.related_border_name,
+            "common_points": point_list
+        }
+        return crossing_dict
+
+
+class Border(object):
+    """
+    Class representing Aixm border item
+
+    Attributes:
+        uuid            Unique reference of the border from within the source file.
+                            for generated points, this should be unique as well
+        code_type       The type of point, as described within source file. might be generated as well
+        text_name       display name of the border as mentioned in source file
+        border_points   list of airspace.interfaces.GisPoint representing the border.
+    """
+    uuid = None
+    code_type = None
+    text_name = None
+    border_points = []
+
+    def __init__(self):
+        super().__init__()
+
+    def append_border_point(self, gis_point_object) -> None:
+        """
+        Adds a GisPoint to the border vector
+
+        :param airspace.interfaces.GisPoint gis_point_object: border point
+        """
+        self.border_points.append(gis_point_object)
+
+    def get_border_point(self, crc) -> GisPoint:
+        """
+        Returns a GisPoint belonging to border vector, using its crc
+
+        :param str crc: GisPoint's crc
+        :return: GisPoint
+        :rtype: airspace.interfaces.GisPoint
+        """
+        point = None
+        try:
+            point = next(x for x in self.border_points if x.crc == crc)
+        except:
+            pass
+        return point
+
+    def to_dict(self) -> dict:
+        point_list = []
+        for point in self.border_points:
+            point_list.append(point.to_dict())
+        border_dict = {
+            "uuid": self.uuid,
+            "code_type": self.code_type,
+            "text_name": self.text_name,
+            "border_coords": point_list
+        }
+        return border_dict
+
+
+class Airspace(object):
+    """
+    A class representation of an airspace.
+
+    Attributes:
+        uuid                The unique identifier of the airspace
+        polygon_points      A list of airspace.interfaces.GisPoint representing airspace geometry
+        code_type           The type of airspace
+        code_id             The numerical code identifier of the airspace
+        text_name           The display name of the airspace
+        code_Activity       The activity code of the airspace
+        code_dist_ver_upper The upper vertical distance  code
+        val_dist_ver_upper  The value of the upper vertical distance
+        uom_dist_ver_upper  The uom of the upper vertical distance
+        code_dist_ver_lower The lower vertical distance code
+        val_dist_ver_lower  The value of the lower vertical distance
+        uom_dist_ver_lower  The uom of the upper vertical distance
+        codeWorkHr          Code for the working hours (when airspace is activated)
+        remark              Remarks
+        border_crossings    A list of airspace.source.BorderCrossing instances
+    """
+    uuid = None
+    polygon_points = []
+    code_type = None
+    code_id = None
+    text_name = None
+    code_Activity = None
+    code_dist_ver_upper = None
+    val_dist_ver_upper = None
+    uom_dist_ver_upper = None
+    code_dist_ver_lower = None
+    val_dist_ver_lower = None
+    uom_dist_ver_lower = None
+    codeWorkHr = None
+    remark = None
+    border_crossings = []
+
+    def __init__(self):
+        super().__init__()
+
+    def get_border_intersection(self, border_uuid) -> BorderCrossing:
+        """
+        Returns an airspace.sources.BorderCrossing object that matches border_uuid. Otherwise, returns None.
+
+        :param str border_uuid: The uuid of the related border
+        :return: The requested airspace.sources.BorderCrossing object
+        :rtype: airspace.sources.BorderCrossing or None
+        """
+        crossing = None
+        try:
+            crossing = next(x for x in self.border_crossings if x.uuid == border_uuid)
+        except:
+            pass
+        return crossing
+
+    def to_kml(self, target_directory: str) -> None:
+        # TODO : implement some color factory in order to avoid having the same color for every airspace
+        kml = simplekml.Kml()
+        pol = kml.newpolygon(name=self.text_name)
+        pol.style.linestyle.color = simplekml.Color.red
+        pol.style.linestyle.width = 1
+        pol.style.polystyle.color = simplekml.Color.changealphaint(100, simplekml.Color.red)
+        outerboundaryis = []
+        for point in self.polygon_points:
+            outerboundaryis.append((point.get_float_lat(), point.get_float_lon()))
+        # Close the polygon
+        outerboundaryis.append((self.polygon_points[0][1], self.polygon_points[0][0]))
+        pol.outerboundaryis = outerboundaryis
+        kml.save(target_directory + '{}.kml'.format(self.text_name))
+
+    def to_dict(self) -> dict:
+        crossing_list = []
+        for crossing in self.border_crossings:
+            crossing_list.append(crossing.to_dict())
+        point_list = []
+        for point in self.polygon_points:
+            point_list.append(point.to_dict())
+
+        json_dict = {
+            "uuid": self.uuid,
+            "code_type": self.code_type,
+            "code_id": self.code_id,
+            "text_name": self.text_name,
+            "code_Activity": self.code_Activity,
+            "code_dist_ver_upper": self.code_dist_ver_upper,
+            "val_dist_ver_upper": self.val_dist_ver_upper,
+            "uom_dist_ver_upper": self.uom_dist_ver_upper,
+            "code_dist_ver_lower": self.code_dist_ver_lower,
+            "val_dist_ver_lower": self.val_dist_ver_lower,
+            "uom_dist_ver_lower": self.uom_dist_ver_lower,
+            "codeWorkHr": self.codeWorkHr,
+            "remark": self.remark,
+            "polygon": point_list,
+            "border_crossings": crossing_list
+        }
+        return json_dict
+
+
+class AixmSource(Sourceable):
     """Class to process Airspace information contained in an AIXM 4.5 source file
 
     This class should implement all the method expected by the Airspace class to
@@ -36,8 +226,6 @@ class AixmSource(object):
 
     __filename = None
     __tree = None
-    __borders = None
-    __air_spaces = None
     __root = None
 
     def __init__(self, filename):
@@ -50,15 +238,11 @@ class AixmSource(object):
         self.__filename = filename
         self.__tree = etree.parse(self.__filename)
         self.__root = self.__tree.getroot()
-        self.__borders = []
-        self.__air_spaces = []
-        self.parse_xml()
+        self._borders = []
+        self._air_spaces = []
+        super().__init__()
 
-    def parse_xml(self):
-        self.parse_borders()
-        self.parse_air_spaces()
-
-    def parse_air_spaces(self):
+    def _parse_air_spaces(self) -> None:
         for admin_data in self.__root.findall('Ase'):
             air_space = Airspace()
             uid = admin_data.find('AseUid')
@@ -88,7 +272,7 @@ class AixmSource(object):
                 air_space.polygon_points, air_space.border_crossings = GisPointFactory.build_free_geometry_point_list(
                     xml_points, self)
 
-    def parse_borders(self):
+    def _parse_borders(self) -> None:
         for border in self.__root.findall('Gbr'):
             border_object = Border()
             uid = border.find('GbrUid')
@@ -108,20 +292,13 @@ class AixmSource(object):
                 border_object.append_border_point(point_object)
             self.add_border(border_object)
 
-    def list_air_spaces(self):
-        str_out = ""
-        for air_space in self.__air_spaces:
-            str_out += air_space.text_name + '\n'
+    def get_air_spaces(self) -> list:
+        return self._air_spaces
 
-        return str_out
+    def get_borders(self) -> list:
+        return self._borders
 
-    def get_air_spaces(self):
-        return self.__air_spaces
-
-    def get_borders(self):
-        return self.__borders
-
-    def get_air_space(self, mid_uuid):
+    def get_air_space(self, mid_uuid: str) -> Airspace:
         """
 
         Args:
@@ -132,24 +309,24 @@ class AixmSource(object):
         """
         air_space = None
         try:
-            air_space = next(x for x in self.__air_spaces if x.uuid == mid_uuid)
-        except:
+            air_space = next(x for x in self._air_spaces if x.uuid == mid_uuid)
+        except StopIteration:
             pass
         return air_space
 
-    def get_border(self, mid_uuid):
+    def get_border(self, mid_uuid: str) -> Border:
         border = None
         try:
-            border = next(x for x in self.__borders if x.uuid == mid_uuid)
-        except:
+            border = next(x for x in self._borders if x.uuid == mid_uuid)
+        except StopIteration:
             pass
         return border
 
-    def add_border(self, border_object):
-        self.__borders.append(border_object)
+    def add_border(self, border_object: Border) -> None:
+        self._borders.append(border_object)
 
-    def add_air_space(self, air_space_object):
-        self.__air_spaces.append(air_space_object)
+    def add_air_space(self, air_space_object: Airspace) -> None:
+        self._air_spaces.append(air_space_object)
 
 
 class GisUtil:
@@ -158,7 +335,7 @@ class GisUtil:
     """
 
     @staticmethod
-    def truncate(f, n) -> float:
+    def truncate(f: float, n: int) -> float:
         """
         Truncates/pads a float f to n decimal places without rounding
 
@@ -174,13 +351,13 @@ class GisUtil:
         return float('.'.join([i, (d + '0' * n)[:n]]))
 
     @staticmethod
-    def format_vertical_limit(code, value, unit):
+    def format_vertical_limit(code: str, value: str, unit: str) -> str:
 
         # TODO: AGL/AMSL ? Ft/FL ? ...
         return '{}-{}-{}'.format(code, value, unit)
 
     @staticmethod
-    def format_geo_size(value, unit):
+    def format_geo_size(value: str, unit: str) -> str:
 
         # TODO: cover all possible unit
         if unit == "NM":
@@ -189,7 +366,7 @@ class GisUtil:
             return float(value) * 1000
 
     @staticmethod
-    def compute_distance(geo_pt1, geo_pt2):
+    def compute_distance(geo_center: GisPoint, geo_point: GisPoint) -> None:
         """Compute great circle distance between 2 points
 
         TODO: Not really used but we might reuse it to compute the "mean" circle radius
@@ -199,17 +376,19 @@ class GisUtil:
             geo_point ([latitude, longitude]): the geo coordinates of the second point
         """
 
-        dstproj = pyproj.Proj('+proj=ortho +lon_0=%f +lat_0=%f' % (geo_pt1[0], geo_pt2[1]))
+        dstproj = pyproj.Proj(
+            '+proj=ortho +lon_0=%f +lat_0=%f' % (geo_center.get_gloat_lon(), geo_point.get_float_lat()))
         srcproj = pyproj.Proj(ellps='WGS84', proj='latlong')
-        new_cx, new_cy = pyproj.transform(srcproj, dstproj, geo_pt1[0], geo_pt1[1])
-        new_px, new_py = pyproj.transform(srcproj, dstproj, geo_pt2[0], geo_pt2[1])
+        new_cx, new_cy = pyproj.transform(srcproj, dstproj, geo_center.get_float_lat(), geo_center.get_float_lon())
+        new_px, new_py = pyproj.transform(srcproj, dstproj, geo_point.get_float_lat(), geo_point.get_float_lon())
         radius = Point(new_cx, new_cy).distance(Point(new_px, new_py))
         logger.debug('Computed radius by shapely %s', radius)
-        azimuth1, azimuth2, radius2 = geod.inv(geo_pt1[0], geo_pt1[1], geo_pt2[0], geo_pt2[1])
+        azimuth1, azimuth2, radius2 = geod.inv(geo_center.get_float_lat(), geo_center.get_float_lon(),
+                                               geo_point.get_float_lat(), geo_point.get_float_lon())
         logger.debug('Computed radius by pyproj only %s', radius2)
 
     @staticmethod
-    def dms2dd(degree, minute, second, decimal=0):
+    def dms2dd(degree: int, minute: int, second: int, decimal: float = 0) -> float:
         """Degree Minute Second (Decimal) => Decimal Degree
 
         Args:
@@ -225,7 +404,7 @@ class GisUtil:
         return float(degree) + float(minute) / 60 + float(second) / 3600 + float(decimal) / 3600
 
     @staticmethod
-    def dd2dms(dd, is_longitude):
+    def dd2dms(dd: float, is_longitude: bool) -> str:
         """Decimal Degree => Degree Minute Second (Decimal)
 
         Args:
@@ -262,7 +441,7 @@ class GisUtil:
         return degrees_fmt + minutes_fmt + seconds_fmt + suffix
 
     @staticmethod
-    def format_decimal_degree(coordinate_string):
+    def format_decimal_degree(coordinate_string: str) -> float:
         """Detect a coordinate format & perform the transformation to Decimal Degree
 
         Works for string representation of Latitude or Longitude
@@ -350,7 +529,7 @@ class CircleHelper(object):
     """
 
     @staticmethod
-    def get_circle_points(arc_center_gispoint, arc_radius) -> list:
+    def get_circle_points(arc_center_gispoint: GisPoint, arc_radius: float) -> list:
         '''Circle points indexed "lookup" structure
 
         Args:
@@ -385,7 +564,8 @@ class CircleHelper(object):
         return arc_lookup
 
     @staticmethod
-    def extract_arc_points(direction, arc_center, arc_radius, arc_start, arc_stop):
+    def extract_arc_points(direction: int, arc_center: GisPoint, arc_radius: float, arc_start: GisPoint,
+                           arc_stop: GisPoint) -> list:
         '''Extract a subset of Circle points forming a specific Arc of Circle
 
         TODO: confirm the arc_radius needs to be in meter
@@ -439,7 +619,7 @@ class CircleHelper(object):
         return CircleHelper.get_arc_points(direction, idx_start, idx_stop, circle_points)
 
     @staticmethod
-    def get_idx_around_arc_point(latitude, longitude, circle_points):
+    def get_idx_around_arc_point(latitude: float, longitude: float, circle_points: list) -> tuple:
         '''Define the index of the 2 circle points that are the closest from a POI (lat, long).
 
         The POI is on or very close from the circle.
@@ -491,7 +671,7 @@ class CircleHelper(object):
         return idx_left, idx_right
 
     @staticmethod
-    def get_arc_points(direction, idx_start, idx_stop, circle_points):
+    def get_arc_points(direction: int, idx_start: tuple, idx_stop: tuple, circle_points: list) -> list:
 
         '''Get the subset of the Arc point in the good direction
 
@@ -546,7 +726,7 @@ class BorderHelper(object):
     """
 
     @staticmethod
-    def extract_border_points(border_object, previous_point, current_point) -> list:
+    def extract_border_points(border_object: Border, previous_point: GisPoint, current_point: GisPoint) -> list:
         """
         Extract border points between two points.
 
@@ -579,7 +759,7 @@ class BorderHelper(object):
             return list(reversed(border_object.border_points[stop:start]))
 
     @staticmethod
-    def get_border_indexes(border_object, crc_start) -> list:
+    def get_border_indexes(border_object: Border, crc_start: tuple) -> list:
         """
         Returns border point indexes from a given point's crc
 
@@ -602,7 +782,7 @@ class BorderHelper(object):
         return index_start
 
     @staticmethod
-    def _get_crc_around_border_point(gis_point_object, border_object) -> tuple:
+    def _get_crc_around_border_point(gis_point_object: GisPoint, border_object: Border) -> tuple:
         """
         Returns the nearest left and right crc of a point within a given border
         :param airspace.interfaces.GisPoint gis_point_object:
@@ -638,7 +818,7 @@ class GisPointFactory(object):
     """
 
     @staticmethod
-    def build_float_point(lat, lon, code_type, crc) -> GisPoint:
+    def build_float_point(lat: str, lon: str, code_type: str, crc: str) -> GisPoint:
         """
         Build a point object from data string
 
@@ -654,7 +834,7 @@ class GisPointFactory(object):
         return FloatGisPoint(lat, lon, crc, code_type)
 
     @staticmethod
-    def build_circle_point_list(circle_element) -> list:
+    def build_circle_point_list(circle_element: etree._Element) -> list:
         """
         Build a list of airspace.interfaces.GisPoint implementation from the given lxml circle element
 
@@ -674,7 +854,7 @@ class GisPointFactory(object):
         return CircleHelper.get_circle_points(arc_center, arc_radius)
 
     @staticmethod
-    def build_free_geometry_point_list(xml_point_list, aixm_source) -> tuple:
+    def build_free_geometry_point_list(xml_point_list: list, aixm_source: AixmSource) -> tuple:
         """
         Build free geometry airspace polygon.
 
@@ -748,11 +928,10 @@ class FloatGisPoint(GisPoint):
    An implementation of airspace.interfaces.GisPoint accepting Float values in constructor
 
    Attributes:
-       __accuracy   The maximum amount of decimal for GPS precision (5 = 1.1m)
+       _accuracy   The maximum amount of decimal for GPS precision (5 = 1.1m)
    """
-    __accuracy = None
 
-    def __init__(self, lat, lon, crc, code_type, accuracy=5):
+    def __init__(self, lat: float, lon: float, crc: str, code_type: str, accuracy: int = 5) -> GisPoint:
         """
 
         :param float lat: Decimal latitude of the airspace.interfaces.GisPoint
@@ -761,25 +940,24 @@ class FloatGisPoint(GisPoint):
         :param float code_type: type of point
         :param accuracy: The maximum amount of decimal for GPS precision (default : 5 = 1.1m)
         """
-        super().__init__(crc, code_type)
-        self.__accuracy = accuracy
+        super().__init__(crc, code_type, accuracy)
         self.set_lat(lat)
         self.set_lon(lon)
 
-    def set_lon(self, lon) -> None:
+    def set_lon(self, lon: float) -> None:
         """
         Sets the longitude for the implemented point
         :param  Float lon: Decimal longitude of the airspace.interfaces.GisPoint
         """
-        self._float_lon = GisUtil.truncate(lon, self.__accuracy)
+        self._float_lon = GisUtil.truncate(lon, self._accuracy)
         self._dms_lon = GisUtil.dd2dms(lon, True)
 
-    def set_lat(self, lat) -> None:
+    def set_lat(self, lat: float) -> None:
         """
         Sets the latitude for the implemented point
         :param  Float lat: Decimal latitude of the airspace.interfaces.GisPoint
         """
-        self._float_lat = GisUtil.truncate(lat, self.__accuracy)
+        self._float_lat = GisUtil.truncate(lat, self._accuracy)
         self._dms_lat = GisUtil.dd2dms(lat, False)
 
     def __str__(self) -> str:
@@ -797,7 +975,7 @@ class DmsGisPoint(GisPoint):
     An implementation of airspace.interfaces.GisPoint accepting DMS values in constructor
     """
 
-    def __init__(self, lat, lon, crc, code_type):
+    def __init__(self, lat: str, lon: str, crc: str, code_type: str, accuracy: int = 5) -> GisPoint:
         """
 
         :param str lat: DMS latitude of the airspace.interfaces.GisPoint
@@ -805,25 +983,25 @@ class DmsGisPoint(GisPoint):
         :param str crc: unique code for the point. might have generated
         :param str code_type: type of point
         """
-        super().__init__(crc, code_type)
+        super().__init__(crc, code_type, accuracy)
         self.set_lat(lat)
         self.set_lon(lon)
 
-    def set_lon(self, lon) -> None:
+    def set_lon(self, lon: str) -> None:
         """
         Sets the longitude for the implemented point
         :param  str lon: DMS longitude of the airspace.interfaces.GisPoint
         """
-        self._float_lon = GisUtil.format_decimal_degree(lon)
-        self._dms_lon = GisUtil.dd2dms(self._float_lon, True)
+        self._float_lon = GisUtil.truncate(GisUtil.format_decimal_degree(lon), self._accuracy)
+        self._dms_lon = GisUtil.dd2dms(GisUtil.format_decimal_degree(lon), True)
 
-    def set_lat(self, lat) -> None:
+    def set_lat(self, lat: str) -> None:
         """
         Sets the latitude for the implemented point
-        :param  str lon: DMS latitude of the airspace.interfaces.GisPoint
+        :param  str lat: DMS latitude of the airspace.interfaces.GisPoint
         """
-        self._float_lat = GisUtil.format_decimal_degree(lat)
-        self._dms_lat = GisUtil.dd2dms(self._float_lat, False)
+        self._float_lat = GisUtil.truncate(GisUtil.format_decimal_degree(lat), self._accuracy)
+        self._dms_lat = GisUtil.dd2dms(GisUtil.format_decimal_degree(lat), False)
 
     def __str__(self) -> str:
         """
@@ -833,127 +1011,3 @@ class DmsGisPoint(GisPoint):
         :return: a string representation of the point
         """
         return '[' + str(self._dms_lon) + ', ' + str(self._dms_lat) + ']'
-
-
-class BorderCrossing(object):
-    """
-    Class representing the intersection of a border in an airspace
-
-    Attributes:
-
-        related_border_uuid     The uuid of the related border
-        related_border_name     The display name of the related border
-        common_points           A list of airspace.interfaces.GisPoint crossing the border
-    """
-    related_border_uuid = None
-    related_border_name = None
-    common_points = []
-
-    def __init__(self, related_border_uuid, related_border_name):
-        """
-        Constructor method
-        :param str related_border_uuid: The uuid of the related border
-        :param str related_border_name: The display name of the related border
-        """
-        super().__init__()
-        self.related_border_name = related_border_name
-        self.related_border_uuid = related_border_uuid
-
-
-class Airspace(object):
-    """
-    A class representation of an airspace.
-
-    Attributes:
-        uuid                The unique identifier of the airspace
-        polygon_points      A list of airspace.interfaces.GisPoint representing airspace geometry
-        code_type           The type of airspace
-        code_id             The numerical code identifier of the airspace
-        text_name           The display name of the airspace
-        code_Activity       The activity code of the airspace
-        code_dist_ver_upper The upper vertical distance  code
-        val_dist_ver_upper  The value of the upper vertical distance
-        uom_dist_ver_upper  The uom of the upper vertical distance
-        code_dist_ver_lower The lower vertical distance code
-        val_dist_ver_lower  The value of the lower vertical distance
-        uom_dist_ver_lower  The uom of the upper vertical distance
-        codeWorkHr          Code for the working hours (when airspace is activated)
-        remark              Remarks
-        border_crossings    A list of airspace.source.BorderCrossing instances
-    """
-    uuid = None
-    polygon_points = []
-    code_type = None
-    code_id = None
-    text_name = None
-    code_Activity = None
-    code_dist_ver_upper = None
-    val_dist_ver_upper = None
-    uom_dist_ver_upper = None
-    code_dist_ver_lower = None
-    val_dist_ver_lower = None
-    uom_dist_ver_lower = None
-    codeWorkHr = None
-    remark = None
-    border_crossings = []
-
-    def __init__(self):
-        super().__init__()
-
-    def get_border_intersection(self, border_uuid) -> BorderCrossing:
-        """
-        Returns an airspace.sources.BorderCrossing object that matches border_uuid. Otherwise, returns None.
-
-        :param str border_uuid: The uuid of the related border
-        :return: The requested airspace.sources.BorderCrossing object
-        :rtype: airspace.sources.BorderCrossing or None
-        """
-        crossing = None
-        try:
-            crossing = next(x for x in self.border_crossings if x.uuid == border_uuid)
-        except:
-            pass
-        return crossing
-
-
-class Border(object):
-    """
-    Class representing Aixm border item
-
-    Attributes:
-        uuid            Unique reference of the border from within the source file.
-                            for generated points, this should be unique as well
-        code_type       The type of point, as described within source file. might be generated as well
-        text_name       display name of the border as mentioned in source file
-        border_points   list of airspace.interfaces.GisPoint representing the border.
-    """
-    uuid = None
-    code_type = None
-    text_name = None
-    border_points = []
-
-    def __init__(self):
-        super().__init__()
-
-    def append_border_point(self, gis_point_object) -> None:
-        """
-        Adds a GisPoint to the border vector
-
-        :param airspace.interfaces.GisPoint gis_point_object: border point
-        """
-        self.border_points.append(gis_point_object)
-
-    def get_border_point(self, crc) -> GisPoint:
-        """
-        Returns a GisPoint belonging to border vector, using its crc
-
-        :param str crc: GisPoint's crc
-        :return: GisPoint
-        :rtype: airspace.interfaces.GisPoint
-        """
-        point = None
-        try:
-            point = next(x for x in self.border_points if x.crc == crc)
-        except:
-            pass
-        return point

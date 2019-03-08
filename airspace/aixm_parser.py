@@ -8,6 +8,8 @@ import simplekml
 from lxml import etree
 from shapely.geometry import Point
 from shapely.ops import transform
+from deprecated import deprecated
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +26,7 @@ class AixmSourceError(Exception):
         Exception (object): Exception as superclass
 
     '''
-
+    @deprecated
     def __init__(self, aixm_source, msg=None):
         '''Init the superclass "Exception" string
 
@@ -49,6 +51,7 @@ class AirspaceGeomUnknown(AixmSourceError):
         AixmSourceError (Exception): AixmSourceError as superclass
     '''
 
+    @deprecated
     def __init__(self, aixm_source, msg=None):
         '''Init the superclass AixmSourceError message
 
@@ -62,12 +65,12 @@ class AirspaceGeomUnknown(AixmSourceError):
             msg = 'unknown geometry'
         super(AirspaceGeomUnknown, self).__init__(aixm_source, msg)
 
-
+@deprecated
 def format_vertical_limit(code, value, unit):
     # TODO: AGL/AMSL ? Ft/FL ? ...
     return '{}-{}-{}'.format(code, value, unit)
 
-
+@deprecated
 def format_geo_size(value, unit):
     # TODO: cover all possible unit
     if unit == "NM":
@@ -75,7 +78,7 @@ def format_geo_size(value, unit):
     if unit == "KM":
         return float(value) * 1000
 
-
+@deprecated
 def compute_distance(geo_pt1, geo_pt2):
     '''Compute great circle distance between 2 points
 
@@ -95,7 +98,7 @@ def compute_distance(geo_pt1, geo_pt2):
     azimuth1, azimuth2, radius2 = geod.inv(geo_pt1[0], geo_pt1[1], geo_pt2[0], geo_pt2[1])
     logger.debug('Computed radius by pyproj only %s', radius2)
 
-
+@deprecated
 def dms2dd(degree, minute, second, decimal=0):
     '''Degree Minute Second (Decimal) => Decimal Degree
 
@@ -111,7 +114,7 @@ def dms2dd(degree, minute, second, decimal=0):
 
     return float(degree) + float(minute) / 60 + float(second) / 3600 + float(decimal) / 3600
 
-
+@deprecated
 def format_decimal_degree(coordinate_string):
     '''Detect a coordinate format & perform the transformation to Decimal Degree
 
@@ -200,6 +203,7 @@ class Airspace(object):
     Implement a common set of Airspace method independant from the Source of the Airspace information
     '''
 
+    @deprecated
     def __init__(self, source, uuid):
         '''Init Method creating a new XCTools Airspace object
 
@@ -213,6 +217,7 @@ class Airspace(object):
         self.admin_data = None
         self.gis_data = None
 
+    @deprecated
     def parse_airspace(self):
         '''Execute the parsing of the Airspace to extract Admin & GIS data
         '''
@@ -230,6 +235,7 @@ class AixmSource(object):
     and normalize the return data to our XCTools format
     '''
 
+    @deprecated
     def __init__(self, filename):
         '''Initialize the AIXM source
 
@@ -246,6 +252,7 @@ class AixmSource(object):
         # A "sliding" buffer to store the last GRC points
         self.grc_buf = ['', '']
 
+    @deprecated
     def list_airspace_uuid(self):
         '''List all Airspace contained in the specific source file
 
@@ -273,7 +280,7 @@ class AixmSource(object):
     #
     #        for avx in self.tree.xpath('//Abd/Avx'):
     #            print('CODE: {}'.format(avx.xpath('codeType/text()')[0]))
-
+    @deprecated
     def airspace_admin_data(self, ase_uid):
         '''Extract & normalize the Airspace Admin data
 
@@ -301,6 +308,7 @@ class AixmSource(object):
         # This method should return the data in the expected format expected by the Airspace
         return admin_data
 
+    @deprecated
     def airspace_geometry_data(self, ase_uid):
         '''Extract & normalize the Airspace GIS data
 
@@ -328,6 +336,7 @@ class AixmSource(object):
 
         raise AirspaceGeomUnknown(self, ase_uid)
 
+    @deprecated
     def _airspace_circle_geometry(self, ase_uid):
         '''Create a polygon for a Circle geometry
 
@@ -355,6 +364,7 @@ class AixmSource(object):
         self._prepare_arc_lookup((arc_center[0], arc_center[1]), arc_radius)
         return self._arc_lookup
 
+    @deprecated
     def _airspace_free_geometry(self, ase_uid):
         '''Create a polygon for a Free geometry
 
@@ -488,6 +498,7 @@ class AixmSource(object):
 
         return gis_data
 
+    @deprecated
     def extract_arc_points(self, direction, arc_center, arc_radius, arc_start, arc_stop):
         '''Extract a subset of Circle points forming a specific Arc of Circle
 
@@ -517,6 +528,7 @@ class AixmSource(object):
         # The actual extraction of the points
         return self._get_arc_points(direction, idx_start, idx_stop)
 
+    @deprecated
     def _prepare_arc_lookup(self, arc_center, arc_radius):
         '''Circle points indexed "lookup" structure
 
@@ -535,6 +547,7 @@ class AixmSource(object):
             print(point)
             self._arc_lookup.append([point[1], point[0], i])
 
+    @deprecated
     def _get_idx_around_arc_point(self, latitude, longitude):
         '''Define the index of the 2 circle points that are the closest from a POI (lat, long).
 
@@ -586,6 +599,7 @@ class AixmSource(object):
 
         return (idx_left, idx_right)
 
+    @deprecated
     def _get_arc_points(self, direction, idx_start, idx_stop):
         '''Get the subset of the Arc point in the good direction
 
@@ -633,6 +647,7 @@ class AixmSource(object):
             stop = min(idx_start) + 1
             return list(reversed(self._arc_lookup[start:stop]))
 
+    @deprecated
     def extract_border_points(self, gbr_uid, border_start, border_stop):
         '''Get the subset of the relevant border point betwwen a start/stop border points
 
@@ -663,6 +678,7 @@ class AixmSource(object):
 
         return self._get_border_points(index_start, index_stop)
 
+    @deprecated
     def _prepare_border_lookup(self, gbr_uid):
         '''Border points indexed "lookup" structure
 
@@ -684,6 +700,7 @@ class AixmSource(object):
             val_crc = gbv_elem.xpath('valCrc/text()')[0]
             self._border_lookup.append([geo_lat, geo_long, val_crc])
 
+    @deprecated
     def _get_crc_around_border_point(self, latitude, longitude):
         '''Define the CRC of the 2 border points that are the closest from a POI (lat, long).
 
@@ -733,6 +750,7 @@ class AixmSource(object):
 
         return (crc_left, crc_right)
 
+    @deprecated
     def _get_border_point_index(self, val_crc):
         '''Lookup the index of the border points based on the CRC value of the points
 
@@ -755,6 +773,7 @@ class AixmSource(object):
                 break
         return (index_left, index_right)
 
+    @deprecated
     def _get_border_points(self, index_start, index_stop):
         '''Extract the subset of the border points in the good direction
 
@@ -779,6 +798,7 @@ class AixmSource(object):
         else:
             return list(reversed(self._border_lookup[stop:start]))
 
+    @deprecated
     def _create_circle(self, center_point, radius):
         '''Create a circle on Earth
 
@@ -852,6 +872,7 @@ if __name__ == '__main__':
     # airspace = Airspace(aixm_source, str(101002747038897))
 
     # A Circle Geometry
+
     name = 'EBR28'
     airspace = Airspace(aixm_source, str(400001601922575))
 

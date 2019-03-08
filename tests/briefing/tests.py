@@ -6,7 +6,7 @@ import unittest
 import datetime
 import logging
 
-from .nats import NATS
+from briefing.source.nats import NATS
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,9 @@ language: python
 python:
   - "3.6"
 script:
-  - python -m notam.tests
-  - python -m briefing.source.tests
-  - python -m airspace.tests
+  - python -m tests.notam.tests
+  - python -m tests.briefing.tests
+  - python -m tests.airspace.tests
+  - python -m tests.airspace.test_gisUtil
+  - python -m tests.CLI.test_CLI
 
