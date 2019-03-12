@@ -51,7 +51,7 @@ elif args.dump_airspace is not None:
     if ais is not None:
         pts_txt = ""
         for point in ais.polygon_points:
-            pts_txt += "DP " + point.get_oa_lat() + " " + point.get_oa_lon() + " "
+            pts_txt += "DP " + point.get_oa_lat() + " " + point.get_oa_lon() + '\n'
         print(pts_txt)
     else:
         print('was not able to find airspace uuid : ' + args.extract_borders)
@@ -65,7 +65,7 @@ elif args.extract_border is not None:
         if crossing is not None:
             pts_txt = ""
             for point in crossing.common_points:
-                pts_txt += "DP " + point.get_oa_lat() + " " + point.get_oa_lon() + " "
+                pts_txt += "DP " + point.get_oa_lat() + " " + point.get_oa_lon() + '\n'
             print(pts_txt)
         else:
             print('was not able to find crossing with border uuid : ' + args.extract_border[1])
@@ -78,7 +78,7 @@ elif args.dump_borders:
         print("")
         pts_txt = ""
         for point in border.border_points:
-            pts_txt += "DP " + point.get_oa_lat() + " " + point.get_oa_lon() + " "
+            pts_txt += "DP " + point.get_oa_lat() + " " + point.get_oa_lon() + '\n'
         print(pts_txt)
 elif args.airspace_to_kml is not None:
     airspace_uuid = args.airspace_to_kml[0]

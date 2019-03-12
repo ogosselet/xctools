@@ -41,7 +41,7 @@ docker pull flyxctools/xctools-cli
 
 Running the container will allow you to interact with the latest xctools version (always packed with container):
 ```bash
-docker run -it flyxctools/xctools-cli /usr/bin/zsh
+docker run -it flyxctools/xctools-cli /usr/bin/zsh  
 ```
 
 
