@@ -29,7 +29,7 @@ XCTools are used in the backend of our website [FlyXC.Tools](http://www.flyxc.to
 
 ## Pulling down the container from Docker-hub
 
-<a href="https://asciinema.org/a/232455" target="_blank"><img src="https://asciinema.org/a/232455.svg" /></a>
+<a href="https://asciinema.org/a/232455?speed=2&autoplay=1&rows=20" target="_blank"><img src="https://asciinema.org/a/232455.svg" /></a>
 
 ## Running the Docker container
 
