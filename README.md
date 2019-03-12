@@ -29,9 +29,21 @@ XCTools are used in the backend of our website [FlyXC.Tools](http://www.flyxc.to
 
 ## Pulling down the container from Docker-hub
 
+You can fetch the latest Docker container build like so (duration may vary with the available bandwidth):
+```bash
+docker pull flyxctools/xctools-cli
+```
+ 
+
 <a href="https://asciinema.org/a/232455?speed=2&autoplay=1&rows=20&cols=120" target="_blank"><img src="https://asciinema.org/a/232455.svg" height="300em;"/></a>
 
 ## Running the Docker container
+
+Running the container will allow you to interact with the latest xctools version (always packed with container):
+```bash
+docker run -it flyxctools/xctools-cli /usr/bin/zsh
+```
+
 
 <a href="https://asciinema.org/a/232458?speed=2&autoplay=1&rows=20&cols=120" target="_blank"><img src="https://asciinema.org/a/232458.svg"  height="300em;"/></a>
 
