@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function
 import logging
 import math
 import re
+import os
 
 import pyproj
 import simplekml
@@ -81,6 +82,7 @@ class Border(object):
 
     def __init__(self):
         super().__init__()
+        self.border_points = []
 
     def append_border_point(self, gis_point_object) -> None:
         """
@@ -144,7 +146,7 @@ class Airspace(object):
     code_type = None
     code_id = None
     text_name = None
-    code_Activity = None
+    code_activity = None
     code_dist_ver_upper = None
     val_dist_ver_upper = None
     uom_dist_ver_upper = None
@@ -182,11 +184,12 @@ class Airspace(object):
         pol.style.polystyle.color = simplekml.Color.changealphaint(100, simplekml.Color.red)
         outerboundaryis = []
         for point in self.polygon_points:
-            outerboundaryis.append((point.get_float_lat(), point.get_float_lon()))
+            outerboundaryis.append((point.get_float_lon(), point.get_float_lat()))
         # Close the polygon
-        outerboundaryis.append((self.polygon_points[0][1], self.polygon_points[0][0]))
+        outerboundaryis.append((self.polygon_points[0].get_float_lon(), self.polygon_points[0].get_float_lat()))
         pol.outerboundaryis = outerboundaryis
-        kml.save(target_directory + '{}.kml'.format(self.text_name))
+        outputfile = os.path.join(target_directory, '{}.kml'.format(self.text_name))
+        kml.save(outputfile)
 
     def to_dict(self) -> dict:
         crossing_list = []
@@ -201,7 +204,7 @@ class Airspace(object):
             "code_type": self.code_type,
             "code_id": self.code_id,
             "text_name": self.text_name,
-            "code_Activity": self.code_Activity,
+            "code_Activity": self.code_activity,
             "code_dist_ver_upper": self.code_dist_ver_upper,
             "val_dist_ver_upper": self.val_dist_ver_upper,
             "uom_dist_ver_upper": self.uom_dist_ver_upper,
@@ -228,7 +231,7 @@ class AixmSource(Sourceable):
     __tree = None
     __root = None
 
-    def __init__(self, filename):
+    def __init__(self, filename, airspaces=[], borders=[]):
         """Initialize the AIXM source
 
         Args:
@@ -240,56 +243,103 @@ class AixmSource(Sourceable):
         self.__root = self.__tree.getroot()
         self._borders = []
         self._air_spaces = []
-        super().__init__()
+        super().__init__(airspaces, borders)
 
-    def _parse_air_spaces(self) -> None:
+    def _parse_air_spaces(self, airspaces) -> None:
         for admin_data in self.__root.findall('Ase'):
             air_space = Airspace()
             uid = admin_data.find('AseUid')
             air_space.uuid = uid.get('mid')
             air_space.code_type = uid.find('codeType').text
             air_space.code_id = uid.find('codeId').text
-            air_space.text_name = admin_data.find('txtName').text
-            air_space.code_Activity = admin_data.find('codeActivity').text
-            air_space.code_dist_ver_upper = admin_data.find('codeDistVerUpper').text
-            air_space.val_dist_ver_upper = admin_data.find('valDistVerUpper').text
-            air_space.uom_dist_ver_upper = admin_data.find('uomDistVerUpper').text
-            air_space.code_dist_ver_lower = admin_data.find('codeDistVerLower').text
-            air_space.val_dist_ver_lower = admin_data.find('valDistVerLower').text
-            air_space.uom_dist_ver_lower = admin_data.find('uomDistVerLower').text
-            air_space.codeWorkHr = admin_data.find('Att').find('codeWorkHr').text
-            air_space.remark = admin_data.find('txtRmk').text
+            try:
+                air_space.text_name = admin_data.find('txtName').text
+            except Exception as exc:
+                air_space.text_name = ''
+
+            # Looks like codeActivity is not in all Airspace
+            try:
+                air_space.code_activity = admin_data.find('codeActivity').text
+            except Exception as exc:
+                air_space.code_activity = ''
+            try:
+                air_space.code_dist_ver_upper = admin_data.find('codeDistVerUpper').text
+            except Exception as exc:
+                air_space.code_dist_ver_upper = ''
+            try:
+                air_space.val_dist_ver_upper = admin_data.find('valDistVerUpper').text
+            except Exception as exc:
+                air_space.val_dist_ver_upper = '0'
+            try:
+                air_space.uom_dist_ver_upper = admin_data.find('uomDistVerUpper').text
+            except Exception as exc:
+                air_space.uom_dist_ver_upper = ''
+            try:
+                air_space.code_dist_ver_lower = admin_data.find('codeDistVerLower').text
+            except Exception as exc:
+                air_space.code_dist_ver_lower = '0'
+            try:
+                air_space.val_dist_ver_lower = admin_data.find('valDistVerLower').text
+            except Exception as exc:
+                air_space.val_dist_ver_lower = ''
+            try:
+                air_space.uom_dist_ver_lower = admin_data.find('uomDistVerLower').text
+            except Exception as exc:
+                air_space.uom_dist_ver_lower = ''
+            try:
+                air_space.codeWorkHr = admin_data.find('Att').find('codeWorkHr').text
+            except Exception as exc:
+                air_space.codeWorkHr = ''
+            try:
+                air_space.remark = admin_data.find('txtRmk').text
+            except Exception as exc:
+                air_space.remark = ''
             self.add_air_space(air_space)
 
-        for space in self.__root.findall('Abd'):
-            uuid = space.find('AbdUid').get('mid')
-            air_space = self.get_air_space(uuid)
-            circle_xml_element = space.find('Circle')
-            if circle_xml_element is not None:
-                air_space.polygon_points = GisPointFactory.build_circle_point_list(circle_xml_element)
-            else:
-                xml_points = space.findall('Avx')
-                air_space.polygon_points, air_space.border_crossings = GisPointFactory.build_free_geometry_point_list(
-                    xml_points, self)
+        if len(airspaces) != 0:
+            # We are not in list mode, we are actually parsing airspaces
+            for space in self.__root.findall('Abd'):
+                uuid = space.find('AbdUid').get('mid')
+                if uuid in airspaces:
+                    # We can process the full parsing
+                    air_space = self.get_air_space(uuid)
+                    circle_xml_element = space.find('Circle')
+                    if circle_xml_element is not None:
+                        air_space.polygon_points = GisPointFactory.build_circle_point_list(circle_xml_element)
+                    else:
+                        xml_points = space.findall('Avx')
+                        try:
+                            air_space.polygon_points, air_space.border_crossings = GisPointFactory.build_free_geometry_point_list(
+                                xml_points, self)
+                        except Exception as exc:
+                            logger.debug(air_space)
+                else:
+                    # We skip the expensive parsing for the other airspaces
+                    pass
 
-    def _parse_borders(self) -> None:
+    def _parse_borders(self, borders) -> None:
+
         for border in self.__root.findall('Gbr'):
             border_object = Border()
             uid = border.find('GbrUid')
             border_object.uuid = uid.get('mid')
             border_object.text_name = uid.find('txtName').text
             border_object.code_type = border.find('codeType').text
-            for point in border.findall('Gbv'):
-                lat = point.find('geoLat')
-                lon = point.find('geoLong')
-                c_type = point.find('codeType')
-                crc = point.find('valCrc')
 
-                point_object = GisPointFactory.build_float_point(lat.text,
+            # We are not in list mode, we are actually parsing airpsaces
+            if len(borders) != 0:
+
+                for point in border.findall('Gbv'):
+                    lat = point.find('geoLat')
+                    lon = point.find('geoLong')
+                    c_type = point.find('codeType')
+                    crc = point.find('valCrc')
+
+                    point_object = GisPointFactory.build_float_point(lat.text,
                                                                  lon.text,
                                                                  c_type.text,
                                                                  crc.text)
-                border_object.append_border_point(point_object)
+                    border_object.append_border_point(point_object)
             self.add_border(border_object)
 
     def get_air_spaces(self) -> list:
@@ -364,6 +414,10 @@ class GisUtil:
             return float(value) * 1852
         if unit == "KM":
             return float(value) * 1000
+        if unit == "M":
+            return float(value)
+        if unit == "FT":
+            return float(value) * 0.3048
 
     @staticmethod
     def compute_distance(geo_center: GisPoint, geo_point: GisPoint) -> None:
@@ -853,8 +907,139 @@ class GisPointFactory(object):
                                              circle_element.find('uomRadius').text)
         return CircleHelper.get_circle_points(arc_center, arc_radius)
 
-    @staticmethod
     def build_free_geometry_point_list(xml_point_list: list, aixm_source: AixmSource) -> tuple:
+        """
+        Build free geometry airspace polygon.
+
+        :param lxml.etree.Element xml_point_list: a list of xml element representing airspace points geometry
+        :param airspace.sources.AixmSource aixm_source: An instance of airspace.sources.AixmSource
+        :return: a list of airspace.interfaces.GisPoint implementation
+        :rtype: list
+        """
+        current_point = None
+        gis_data = []
+        border_crossings = []
+        point_buffer = ['', '']
+        codetype_buffer = ['', '']
+
+
+        for xml_point in xml_point_list:
+
+
+            # In an AVX, there is always a reference to a point
+            # We will store this point in a sliding buffer so that the
+            # previous point remains available if we need it
+            # We also directly normalize it to a decimal degree value
+
+            # Slide the buffers
+            point_buffer[0] = point_buffer[1]
+            codetype_buffer[0] = codetype_buffer[1]
+
+            # Collect next point
+            code_type = xml_point.find('codeType').text
+            point_buffer[1] = FloatGisPoint(GisUtil.format_decimal_degree(xml_point.find('geoLat').text),
+                                          GisUtil.format_decimal_degree(xml_point.find('geoLong').text),
+                                          xml_point.find('valCrc').text, code_type)
+
+            if code_type == 'GRC':
+                codetype_buffer[1] = 'GRC'
+                # Nothing more to collect
+
+            if code_type == 'RHL':
+                codetype_buffer[1] = 'RHL'
+                # Nothing more to collect
+
+            if code_type == 'FNT':
+                codetype_buffer[1] = 'FNT'
+
+                # Collect the border id information
+                border_uuid = xml_point.find('GbrUid').get('mid')
+
+            if code_type == 'CCA':
+                codetype_buffer[1] = 'CCA'
+
+                arc_center = FloatGisPoint(GisUtil.format_decimal_degree(xml_point.find('geoLatArc').text),
+                                           GisUtil.format_decimal_degree(xml_point.find('geoLongArc').text),
+                                           xml_point.find('valCrc').text + "center", "CCA_CENTER")
+
+                arc_radius = GisUtil.format_geo_size(
+                    value=xml_point.find('valRadiusArc').text,
+                    unit=xml_point.find('uomRadiusArc').text
+                )
+
+            # TODO: Refactor to make it DRY (too similar with previous code extract)
+            if code_type == 'CWA':
+                codetype_buffer[1] = 'CWA'
+
+                arc_center = FloatGisPoint(GisUtil.format_decimal_degree(xml_point.find('geoLatArc').text),
+                                           GisUtil.format_decimal_degree(xml_point.find('geoLongArc').text),
+                                           xml_point.find('valCrc').text + "center", "CCA_CENTER")
+
+                arc_radius = GisUtil.format_geo_size(
+                    value=xml_point.find('valRadiusArc').text,
+                    unit=xml_point.find('uomRadiusArc').text
+                )
+
+            # Now we implement the previous code_type
+            if codetype_buffer[0] == 'GRC' or codetype_buffer[0] == 'RHL':
+                # We just pile up the point
+                gis_data.append(point_buffer[0])
+            if codetype_buffer[0] == 'FNT':
+                logger.debug('Expanding Border (FNT %s)', border_uuid)
+                # We pile up the first point
+                gis_data.append(point_buffer[0])
+                # ... and extend with the points extracted from the border
+                border_obj = aixm_source.get_border(border_uuid)
+                border_points = BorderHelper.extract_border_points(border_obj, point_buffer[0], point_buffer[1])
+                gis_data.extend(border_points)
+                crossing = BorderCrossing(border_uuid, border_obj.text_name)
+                crossing.common_points.extend(border_points)
+                border_crossings.append(crossing)
+                # Cleanup
+                gbr_uid = None
+            if codetype_buffer[0] == 'CCA':
+                #logger.debug(
+                #    'Expanding Arc (CCA) Center: %s, %s Radius: %s',
+                #    arc_center[0], arc_center[1], str(arc_radius)
+                #)
+                # We pile up the first point
+                gis_data.append(point_buffer[0])
+                # Counter Clockwise = -1
+                gis_data.extend(
+                    CircleHelper.extract_arc_points(-1, arc_center, arc_radius, point_buffer[0], point_buffer[1]))
+
+                # Cleanup
+                arc_center = None
+                arc_radius = None
+
+            if codetype_buffer[0] == 'CWA':
+                #logger.debug(
+                #    'Expanding Arc (CWA) Center: %s, %s Radius: %s',
+                #    arc_center[0], arc_center[1], str(arc_radius)
+                #)
+                # We pile up the first point
+                gis_data.append(point_buffer[0])
+                # Counter Clockwise = -1
+                gis_data.extend(
+                    CircleHelper.extract_arc_points(1, arc_center, arc_radius, point_buffer[0], point_buffer[1]))
+
+                # Cleanup
+                arc_center = None
+                arc_radius = None
+
+            if codetype_buffer[0] == '':
+                logger.debug(
+                    'This is the very first point'
+                )
+
+        # When the loop is over, we still have our last buffer point to add.
+        gis_data.append(point_buffer[1])
+
+        return gis_data, border_crossings
+
+
+    @staticmethod
+    def build_free_geometry_point_list_wrong(xml_point_list: list, aixm_source: AixmSource) -> tuple:
         """
         Build free geometry airspace polygon.
 

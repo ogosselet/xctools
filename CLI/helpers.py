@@ -12,6 +12,13 @@ class AirspaceHelper:
 
     @staticmethod
     def list_airspaces(source):
+        table = PrettyTable(['CodeID', 'Airspace Name', 'Airspace UUID'])
+        for air_space in source.get_air_spaces():
+            table.add_row([air_space.code_id, air_space.text_name, str(air_space.uuid)])
+        return table
+
+    @staticmethod
+    def list_airspaces2(source):
         table = PrettyTable(['Airspace Name', 'Airspace UUID', 'Border crossed'])
         for air_space in source.get_air_spaces():
             if len(air_space.border_crossings) > 0:
@@ -26,8 +33,9 @@ class AirspaceHelper:
             table.add_row([air_space.text_name, str(air_space.uuid), crossing_list])
         return table
 
+
     @staticmethod
-    def extract_borders(airspace_uuid, source):
+    def extract_borders(source, airspace_uuid):
         output = ""
         ais = source.get_air_space(airspace_uuid)
         if ais is not None:

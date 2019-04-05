@@ -17,36 +17,45 @@ parser = argparse.ArgumentParser(description="Aixm Airspace File CLI parser")
 group = parser.add_mutually_exclusive_group()
 group.add_argument("-lb", "--list_borders", help="List borders contained in the source file", action="store_true")
 group.add_argument("-la", "--list_airspaces", help="List airspaces contained in the source file", action="store_true")
-group.add_argument("-ebs", "--extract_borders", help="Extract borders from given airspace", metavar="AIRSPACE_UUID")
+group.add_argument("-eba", "--extract_borders", help="Extract borders from given airspace", metavar="AIRSPACE_UUID")
 group.add_argument("-akml", "--airspace_to_kml", help="Dump airspace to kml file", nargs=2,
                    metavar=("AIRSPACE_UUID", "TARGET_DIRECTORY"))
-group.add_argument("-askml", "--airspaces_to_kml", help="Dump all source's airspaces to kml files",
-                   metavar="TARGET_DIRECTORY")
-group.add_argument("-eb", "--extract_border", help="Extract borders from given airspace", nargs=2,
-                   metavar=("AIRSPACE_UUID", "BORDER_UUID"))
-group.add_argument("-da", "--dump_airspace", help="Extract airspace geometry in OpenAir format",
-                   metavar="AIRSPACE_UUID")
-group.add_argument("-ds", "--dump_source", help="Dump source file in OpenAir format", action="store_true")
-group.add_argument("-dsj", "--dump_source_json", help="Dump source file in json format", action="store_true")
-group.add_argument("-db", "--dump_borders", help="Dump all borders in OpenAir format", action="store_true")
+# group.add_argument("-askml", "--airspaces_to_kml", help="Dump all source's airspaces to kml files",
+#                   metavar="TARGET_DIRECTORY")
+#group.add_argument("-eb", "--extract_border", help="Extract borders from given airspace", nargs=2,
+#                   metavar=("AIRSPACE_UUID", "BORDER_UUID"))
+#group.add_argument("-da", "--dump_airspace", help="Extract airspace geometry in OpenAir format",
+#                   metavar="AIRSPACE_UUID")
+#group.add_argument("-ds", "--dump_source", help="Dump source file in OpenAir format", action="store_true")
+#group.add_argument("-dsj", "--dump_source_json", help="Dump source file in json format", action="store_true")
+#group.add_argument("-db", "--dump_borders", help="Dump all borders in OpenAir format", action="store_true")
 parser.add_argument("file", help="Aixm source file")
 
 args = parser.parse_args()
 
-source = AixmSource(args.file)
+# source = AixmSource(args.file, action, scope)
+
 
 if args.list_borders:
 
+    source = AixmSource(args.file)
     print(AirspaceHelper.list_borders(source))
 
 elif args.list_airspaces:
 
+    source = AixmSource(args.file)
     print(AirspaceHelper.list_airspaces(source))
 
 elif args.extract_borders is not None:
-    print(AirspaceHelper.extract_borders(args.extract_borders, source))
+
+    # [1] is a fake list to force extraction of all borders
+    # [args.extract_borders] contains a single Airspace UUID to extract
+    source = AixmSource(args.file, [args.extract_borders], [1])
+    print(AirspaceHelper.extract_borders(source, args.extract_borders))
 
 elif args.dump_airspace is not None:
+
+    source = AixmSource(args.file, [args.dump_airspace], [1])
     ais = source.get_air_space(args.dump_airspace)
     if ais is not None:
         pts_txt = ""
@@ -59,6 +68,7 @@ elif args.dump_source:
     # TODO : generate appropriate OpenAir output. What about Airspace declaration format?
     pass
 elif args.extract_border is not None:
+
     ais = source.get_air_space(args.extract_border[0])
     if ais is not None:
         crossing = ais.get_border_intersection(args.extract_border[1])
@@ -72,6 +82,7 @@ elif args.extract_border is not None:
     else:
         print('was not able to find airspace uuid : ' + args.extract_border[0])
 elif args.dump_borders:
+
     for border in source.get_borders():
         print()
         print("# Dump of border " + border.text_name + " (" + border.uuid + ")")
@@ -80,7 +91,10 @@ elif args.dump_borders:
         for point in border.border_points:
             pts_txt += "DP " + point.get_oa_lat() + " " + point.get_oa_lon() + '\n'
         print(pts_txt)
+
 elif args.airspace_to_kml is not None:
+
+    source = AixmSource(args.file, [args.airspace_to_kml[0]], [1])
     airspace_uuid = args.airspace_to_kml[0]
     target_dir = args.airspace_to_kml[1]
     if os.listdir(target_dir):
@@ -91,14 +105,18 @@ elif args.airspace_to_kml is not None:
             print('was not able to find airspace uuid : ' + args.extract_borders)
     else:
         print(target_dir + ' is not a valid directory.')
+
 elif args.airspaces_to_kml is not None:
+
     target_dir = args.airspace_to_kml[1]
     if os.listdir(target_dir):
         for ais in source.get_air_spaces():
             ais.to_kml(target_dir)
     else:
         print(target_dir + ' is not a valid directory.')
+
 elif args.dump_source_json:
+
     print(json.dumps(source.to_dict()))
 
 else:

@@ -12,16 +12,17 @@ class Sourceable(ABC):
     _borders = None
     _air_spaces = None
 
-    def __init__(self):
-        self._parse_borders()
-        self._parse_air_spaces()
+    def __init__(self, airspaces=[], borders=[]):
+
+        self._parse_borders(borders)
+        self._parse_air_spaces(airspaces)
 
     @abstractmethod
-    def _parse_air_spaces(self) -> None:
+    def _parse_air_spaces(self, borders) -> None:
         pass
 
     @abstractmethod
-    def _parse_borders(self) -> None:
+    def _parse_borders(self, airspaces) -> None:
         pass
 
     @abstractmethod
